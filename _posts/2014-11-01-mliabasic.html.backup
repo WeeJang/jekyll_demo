@@ -3,9 +3,9 @@ layout: default
 title: [Machine Learning in Action]Basic
 ---
 
-<h2>{{ page.title }}</h2>
+<h1>{{ page.title }}</h1>
 
-<h3>the Main Step for Creating an Application which Using Machine-Learning </h3>
+<h2>the Main Step for Creating an Application which Using Machine-Learning </h2>
 
 <ol>
 <li>收集数据</li>
@@ -17,9 +17,9 @@ title: [Machine Learning in Action]Basic
 </ol>
 
 
-<h3> Details: </h3>
+<h2> Details: </h2>
 
-<h4>--收集数据 </h4>
+<h3>--收集数据 </h3>
 <pre>
 	方法主要有两种：
 		1 自己制作方案，获取数据。比如编写网页爬虫，从RSS反馈或者API,检测设备。这种方法比较费时费力。
