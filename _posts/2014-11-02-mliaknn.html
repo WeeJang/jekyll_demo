@@ -62,7 +62,83 @@ def classify0(intX,dataSet,labels,k):
 
 <hr/>
 
+<h3> Tips </h3>
 
+<h4>[1]通用函数</h4>
+<pre>
+	测试时，难免会用到一些复用性较高的函数(模块)来提高效率。
+	比如，针对classify0中的dataSet和labels,我们可以编写模块来从数据源读取。当然在前期较简单的方式如下：
+	
+	#kNN.py
+	from numpy import *
+	import operator
+	
+	def createDataSet():
+		featureVecSet = array([[1,0],[0,1],[0,0]])
+		labels = ['A','B','C']
+		return featureVecSet,labels
+
+	当我们需要测试时，可以这样：
+	import kNN
+	dataSet,labels = kNN.createDataSet()
+	…………………………
+	
+------------------------------------------------------------------------------------------------------------------------------
+</pre>
+
+<h4>[2]文本记录转换为NumPy的解析程序</h4>
+<pre>
+	将特征数据（一般是保存在文本中的）输入分类器之前，必须将其格式化为可接受的形式。
+	
+	def file2matrix(filename):
+		
+		#获取文件行数
+		fr = open(filename)
+		arrayOLines = fr.readlines()
+		numberOfLine = len(arrayOLines)
+		
+		#创建返回特征集合矩阵(N为特征数，硬编码)
+		returnMat = zeros((numberOfLine,N))
+		#创建返回分类向量
+		classLabelVector = []
+		index = 0
+
+		for line in arrayOLines:
+			line = line.strip()
+			listFromLine = line.split('\t')
+			returnMat[index,:] = listFromLine[:,N]
+			classLabelVector.append(int(listFromLine[-1]))
+			index += 1
+		
+		return returnMat,classLabelVector
+
+------------------------------------------------------------------------------------------------------------------------------
+</pre>
+
+
+<h4>[3]数据归一化</h4>
+<pre>
+	在处理”距离“时，一定要注意数据归一化的问题。因为不同特征的取值范围是不一样的。
+	比如: Feature1的范围[0,1] Feature2的范围[0,1000]，若不进行归一化处理，Feature2对结果造成的影响远远大于Feature1。
+	
+	通常采用的方法，将范围处理为0到1（或者-1到1）之间。下面给出一种处理为 0到1 的方案：
+	
+	<strong>newValue = (oldValue - minValue) / （maxValue - minValue)</strong>
+	
+	下面给出实现代码：
+	def autoNorm(dataSet):
+		minVals = dataSet.min(0)
+		maxVals = dataSet.max(0)
+		ranges = maxVals - minVals
+		normDataSet = zeros(shape(dataSet))
+		m = dataSet.shape[0]
+		normDataSet = dataSet - tile(minVals,(m,1))
+		normDataSet = normDataSet/tile(ranges,(m,1))
+		return normDataSet, ranges, minVals
+</pre>	
+
+
+<hr/>
 <p> Welcome to contact <a href="mailto:jangwee1@sina.com.cn">me</a>,the friends who like Machine-Learning and Data-Mining.</p>
 <p> <a href=freedom.png>:)</a></p>
 
