@@ -23,22 +23,44 @@ title: Machine Learning in Action::k-近邻算法（kNN）
 
 <h3> kNN-算法实现 </h3>
 
+<pre>
+函数说明：
+	kNN 主体算法
+输入参数：
+	intX : 预测数据（特征向量） : list
+	dataSet ： 训练集（特征向量集） : array
+	labels : 训练集对应的标签（类型向量） : list
+	k : 投票个体数 : int
+返回参数：
+	预测结果：最有可能的分类 : str
+</pre>
+
 <code>
 <pre>
 def classify0(intX,dataSet,labels,k):
+
+	#计算距离（此处采用的是欧式距离）
 	dataSetSize = dataSet.shape[0]
 	diffMat = tile(intX,(dataSetSize,1)) - dataSet
 	sqDiffMat = diffMat**2
 	sqDistances = sqDiffMat.sum(axis = 1)
 	distances = sqDistances**0.5
+
+	#选择距离最小的K个点
 	sortedDistIndicies = distances.argsort()
 	classCount = {}
 	for i in range(k):
 		voteILabel = labels[sortedDistIndicies[i]]
 		classCount[voteILabel] = classCount.get(voteILable,0) + 1
+
+	#排序
 	sortedClassCount = sorted(classCount.iteritems(),key = operator.itemgetter(1),reverse=True)
 	return sortedClassCount[0][0]
+
 </pre>
 </code>
+
+<hr/>
+
 
 
