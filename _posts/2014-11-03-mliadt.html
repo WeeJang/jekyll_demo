@@ -19,7 +19,7 @@ title: Machine Learning in Action::Decision Tree(DT)
 		没有特征可以继续划分），则终止，该终止节点的属性为该类别（或者集合中最多的类别）；否则对较小集合进行继续选取剩余特征，划分，递归下去。
 		最终形成一个树。当拿到预测集合的数据时，从根节点（最重要节点）的特征进行匹配，依次往下，直到到达所属分类，即为预测分类。
 	优缺点：计算复杂度不高，结果易于理解，对中间值缺失不敏感，可处理不相关特征数据。适用于专家系统。
-		但可能会产生过度匹配问题。
+		但可能会产生overfitting
 </pre>
 
 <hr />
@@ -30,7 +30,7 @@ title: Machine Learning in Action::Decision Tree(DT)
 函数名称： 
 	createTree(dataSet,labels)
 函数说明：
-	创建决策树
+	递归创建决策树
 输入参数：
 	dataSet : 训练集（特征向量+类别） ： array
 	labels : 特征向量名称 ： list
@@ -58,13 +58,84 @@ def createTree(dataSet,labels):
 	#获取决策模块的分支情况
 	featValues = [example[bestFeatIndex] for example in dataSet]
 	uniqueVals = set(featValues)
-	#创建分支
+	#创建该节点下的所有分支
 	for value in uniqueVals:
 		#Python传引用，避免破坏，clone一份
 		subLabels = labels[:]
+		#创建其中一个value对应的分支
 		myTree[bestFeatLabel][value] = createTree(splitDataSet(dataSet,bestFeat,value),subLabels)
 	
 	return myTree
 
+-------------------------------------------------------------------------------------------------------------------------
+函数名称：
+	classify(inputTree,featLabels,testVec)
+函数说明：
+	递归的寻找最有可能的分类标签
+输入参数：
+	inputTree : 构建的决策树 ： dict
+	featLabels : 预测数据的特征名称 ： list
+	teseVec : 预测数据的特征值（与featLabels对应） ： list 
+返回参数：
+	预测的分类
+
+def classify(inputTree,featLabels,testVec):
+	
+	#获取根判断模块的feature
+	firstStr = inputTree.keys()[0]
+	#获取判决模块下的森林（集合）
+	secondDict = inputTree[firstStr]
+	#获取预测数据的对应的该判决模块在featLabels中的位置，便于取值
+	featIndex = featLabels.index(firstStr)
+	
+	#遍历森林，找对应的树
+	for key in secondDict.keys():
+		if key == testVec[featIndex]:
+			#该value对应的是一颗树（未到分类节点），继续递归
+			if type(secondDict[key]).__name__ == "__dict__":
+				classLabel = classify(secondDict[<strong>key</strong>],featLabels,testVec)
+			#否则到达分类节点
+			else:
+				classLabel = secondDict[key]
+		return classLabel
+
+
+-------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+-------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	
 </pre>
+
+
+
