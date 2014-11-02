@@ -1,9 +1,9 @@
 ---
 layout: default
-title: Machine Learning in Practice:: k-近邻算法（kNN）
+title: Machine Learning in Action:: k-近邻算法（kNN）
 ---
 
-<h2> {{ page.title }} </h2>
+<h2>{{ page.title }}</h2>
 
 <hr />
 
@@ -24,6 +24,7 @@ title: Machine Learning in Practice:: k-近邻算法（kNN）
 <h3> kNN-算法实现 </h3>
 
 <code>
+<pre>
 def classify0(intX,dataSet,labels,k):
 	dataSetSize = dataSet.shape[0]
 	diffMat = tile(intX,(dataSetSize,1)) - dataSet
@@ -37,6 +38,7 @@ def classify0(intX,dataSet,labels,k):
 		classCount[voteILabel] = classCount.get(voteILable,0) + 1
 	sortedClassCount = sorted(classCount.iteritems(),key = operator.itemgetter(1),reverse=True)
 	return sortedClassCount[0][0]
+</pre>
 </code>
 
 
