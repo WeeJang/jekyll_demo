@@ -93,7 +93,7 @@ def classify(inputTree,featLabels,testVec):
 		if key == testVec[featIndex]:
 			#该value对应的是一颗树（未到分类节点），继续递归
 			if type(secondDict[key]).__name__ == "__dict__":
-				classLabel = classify(secondDict[<strong>key</strong>],featLabels,testVec)
+				classLabel = classify(secondDict[<a href><strong>key</strong></a>],featLabels,testVec)
 			#否则到达分类节点
 			else:
 				classLabel = secondDict[key]
