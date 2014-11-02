@@ -27,8 +27,44 @@ title: Machine Learning in Action::Decision Tree(DT)
 <h3> DT-核心算法实现 </h3>
 
 <pre>
+函数名称： 
+	createTree(dataSet,labels)
 函数说明：
-	DT 核心算法
+	创建决策树
 输入参数：
+	dataSet : 训练集（特征向量+类别） ： array
+	labels : 特征向量名称 ： list
+返回参数：
+	返回构造的决策树 ： dict 
+
+def createTree(dataSet,labels):
+	
+	#获取训练集样本的类别
+	classList = [example[-1] for example in dataSet]
+	
+	#集合是否属于一类：
+	if classList.count(classList[0]) == len(classList):
+		return labels
+	#判断是否只剩下一个特征：
+	if len(dataSet[0]) == 1:
+		return majorityCnt(classList)
+
+	#均不是以上两种情况，选取最好特征进行分类
+	bestFeatIndex = chooseBestFeatureToSplit(dataSet)
+	bestFeatLabel = labels[bestFeatIndex]
+	#构建一个决策模块
+	myTree = {bestFeatLabel:{}}
+	del(labels[bestFeatIndex])
+	#获取决策模块的分支情况
+	featValues = [example[bestFeatIndex] for example in dataSet]
+	uniqueVals = set(featValues)
+	#创建分支
+	for value in uniqueVals:
+		#Python传引用，避免破坏，clone一份
+		subLabels = labels[:]
+		myTree[bestFeatLabel][value] = createTree(splitDataSet(dataSet,bestFeat,value),subLabels)
+	
+	return myTree
+
 	
 </pre>
