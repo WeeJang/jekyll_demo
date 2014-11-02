@@ -1,0 +1,42 @@
+---
+layout: default
+title: Machine Learning in Practice:: k-近邻算法（kNN）
+---
+
+<h2> {{ page.title }} </h2>
+
+<hr />
+
+<h3> KNN-概述 </h3>
+
+<pre>
+	关键词：分类·监督学习
+
+	原理：基于特征距离的最相近样本的等权重投票制。
+	简单来讲：存在一个样本数据集合（训练集），样本中的每一条数据都存在一个标签（所属分类）。预测数据集合是仅有特征数据没有标签的数据集合。
+		对于预测集的每一条数据，我们均可以将其与样本集合中的数据在特征空间进行距离计算，挑选出与之距离最相近的K个样本数据。然后这K个
+		样本数据中，出现次数最多的分类即为我们要预测的那个分类。
+	缺点：显而易见，计算的时间复杂度与空间复杂度均较高。
+</pre>
+
+<hr />
+
+<h3> kNN-算法实现 </h3>
+
+<code>
+def classify0(intX,dataSet,labels,k):
+	dataSetSize = dataSet.shape[0]
+	diffMat = tile(intX,(dataSetSize,1)) - dataSet
+	sqDiffMat = diffMat**2
+	sqDistances = sqDiffMat.sum(axis = 1)
+	distances = sqDistances**0.5
+	sortedDistIndicies = distances.argsort()
+	classCount = {}
+	for i in range(k):
+		voteILabel = labels[sortedDistIndicies[i]]
+		classCount[voteILabel] = classCount.get(voteILable,0) + 1
+	sortedClassCount = sorted(classCount.iteritems(),key = operator.itemgetter(1),reverse=True)
+	return sortedClassCount[0][0]
+</code>
+
+
