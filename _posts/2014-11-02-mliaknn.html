@@ -24,19 +24,20 @@ title: Machine Learning in Action::k-近邻算法（kNN）
 <h3> kNN-算法实现 </h3>
 
 <code>
-def classify0(intX,dataSet,labels,k):<br/>
-	dataSetSize = dataSet.shape[0]<br/>
-	diffMat = tile(intX,(dataSetSize,1)) - dataSet<br/>
-	sqDiffMat = diffMat**2<br/>
-	sqDistances = sqDiffMat.sum(axis = 1)<br/>
-	distances = sqDistances**0.5<br/>
-	sortedDistIndicies = distances.argsort()<br/>
-	classCount = {}<br/>
-	for i in range(k):<br/>
-		voteILabel = labels[sortedDistIndicies[i]]<br/>
-		classCount[voteILabel] = classCount.get(voteILable,0) + 1<br/>
-	sortedClassCount = sorted(classCount.iteritems(),key = operator.itemgetter(1),reverse=True)<br/>
-	return sortedClassCount[0][0]<br/>
+<pre>
+def classify0(intX,dataSet,labels,k):
+	dataSetSize = dataSet.shape[0]
+	diffMat = tile(intX,(dataSetSize,1)) - dataSet
+	sqDiffMat = diffMat**2
+	sqDistances = sqDiffMat.sum(axis = 1)
+	distances = sqDistances**0.5
+	sortedDistIndicies = distances.argsort()
+	classCount = {}
+	for i in range(k):
+		voteILabel = labels[sortedDistIndicies[i]]
+		classCount[voteILabel] = classCount.get(voteILable,0) + 1
+	sortedClassCount = sorted(classCount.iteritems(),key = operator.itemgetter(1),reverse=True)
+	return sortedClassCount[0][0]
 </pre>
 </code>
 
