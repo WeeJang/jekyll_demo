@@ -2,10 +2,20 @@
 layout: default
 title: Way,Wee 
 ---
-<h2>{{ page.title }}</h2>
-<p>New Post</p>
+<h1>{{ page.title }}</h1>
+<h3>----------------love math,love code.暂时都没学好。坚信：写代码跟种粮食是无差别的值得尊重的人类劳动，都能解决温饱问题。</h3>
+
+
+<hr />
+<h2>New Post</h2>
 <ul>
 	{% for post in site.posts %}
 		<li>{{ post.date | date_to_string }} <a href="{{ site.baseurl }}{{ post.url }}">{{ post.title }}</a></li>
 　　　　{% endfor %}
 </ul>
+
+
+
+
+
+
