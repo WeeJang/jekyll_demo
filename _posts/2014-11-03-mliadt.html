@@ -241,7 +241,38 @@ def chooseBestFeatureToSplit(dataSet):
 </pre>
 
 
+<h4>挑选投票最多的情况</h4>
 
+<pre>
+
+	当特征消耗完，属于一个子集的实体仍旧不是同一个分类，这时候就要挑选出出现次数最多的分类作为判决节点。
+
+函数名称：
+	majorityCnt(classList)
+函数功能：
+	选择出现次数最多的类别
+输入参数：
+	classList : 类别列表 : list
+返回参数：
+	出现次数最多的分类
+
+def majorityCnt(classList):
+	
+	classCount = {}
+	for vote in classList:
+		#classCount[vote] = classCount.get(vote,0) + 1
+		if vote in classCount.key():
+			class[vote] += 1
+		else:
+			class[vote] = 0
+	
+	sortedClassCount = sorted(classCount.iteritems(),key = operator.itemgetter(1),reverse = True)
+	return sortedClassCount[0][0]
+
+-------------------------------------------------------------------------------------------------------------------------
+	
+	
+</pre>
 
 
 
