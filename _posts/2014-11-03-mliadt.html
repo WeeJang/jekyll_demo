@@ -241,7 +241,7 @@ def chooseBestFeatureToSplit(dataSet):
 </pre>
 
 
-<h4>挑选投票最多的情况</h4>
+<h4>[4]挑选投票最多的情况</h4>
 
 <pre>
 
@@ -274,37 +274,61 @@ def majorityCnt(classList):
 	
 </pre>
 
+<h4>[5]决策树的存储</h4>
+
+<pre>
+
+	构建决策树（以及其他分类器）都是一个相当耗费资源以及时间的过程，如何将学到分类器存储起来，便涉及到一个非常重要的技术： <strong>对象序列化</strong>
+	对象的序列化，简单来讲，就是将对象保存在外部存储器上，需要的时候再读取出来。
+	通过这项技术，我们可以实现决策树的<strong>持久化</strong>
+
+	在Python中，通过使用pickle模块序列化对象。
+
+函数名称：
+	storeTree(inputTree,filename):
+函数功能：
+	将决策树，持久化的保存到文件中
+输入参数：
+	inputTree : 决策树 : dict
+	filename : 保存到的文件 : str
+返回参数：
+	无
 
 
+def storeTree(inputTree,filename):
+	import pickle
+	fw = open(filename,"w")
+	pickle.dump(inputTree,fw)
+	fw.close()
 
+函数名称：
+	grabTree(filename)
+函数功能：
+	将决策树对象从文件读取到内存，还原对象
+输入参数：
+	filename : 决策树保存的文件 ：str
+返回参数：
+	决策树对象 ： dict
 
-
+def grabTree(filename):
+	import pickle
+	fr = open(filename,"r")
+	return pickle.load(fr)
 
 
 -------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------
+
+</pre>
 
 
--------------------------------------------------------------------------------------------------------------------------
--------------------------------------------------------------------------------------------------------------------------
+<hr/>
+<p> Welcome to contact <a href="mailto:jangwee1@sina.com.cn">me</a>,the friends who like Machine-Learning and Data-Mining.</p>
+<p> <a href=freedom.png>:)</a></p>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+<p>{{ page.date | date_to_string }}</p>
 
 
 	
-</pre>
 
 
 
