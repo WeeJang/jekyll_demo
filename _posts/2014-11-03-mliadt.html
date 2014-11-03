@@ -274,7 +274,7 @@ def majorityCnt(classList):
 	
 </pre>
 
-<h4>[5]决策树的存储</h4>
+<h4>[5]决策树的持久化</h4>
 
 <pre>
 
@@ -294,12 +294,14 @@ def majorityCnt(classList):
 返回参数：
 	无
 
-
 def storeTree(inputTree,filename):
 	import pickle
 	fw = open(filename,"w")
 	pickle.dump(inputTree,fw)
 	fw.close()
+
+---------------------
+
 
 函数名称：
 	grabTree(filename)
