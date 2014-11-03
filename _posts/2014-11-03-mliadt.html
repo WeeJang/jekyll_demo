@@ -168,6 +168,8 @@ def calcShannonEntropy(dataSet):
 
 函数名称：
 	splitDataSet(dataSet,axis,value)
+函数功能：
+	根据特征值划分数据集合，返回符合特征值的特征集合，会消耗特征
 输入参数：
 	dataSet : 预测集合（特征+类别） : array
 	axis : 划分坐标轴（特征序号） : int 
@@ -191,7 +193,52 @@ def splitDataSet(dataSet,axis,value):
 
 </pre>
 
-<h4>[3]
+<h4>[3]最佳特征选取</h4>
+
+<pre>
+	这里采用的是ID3算法，因此每次特征选择之后，会消耗特征。
+	
+函数名称：
+	chooseBestFeatureToSplit(dataSet)
+函数功能：
+	根据信息增益，选择最好特征划分数据集合
+输入参数：
+	dataSet : 预测集合（特征+类别） ： array
+返回参数：
+	返回最好特征 str
+
+def chooseBestFeatureToSplit(dataSet):
+	
+	numFeature = len(dataSet[0]) - 1
+	baseEntropy = calcShannonEntropy(dataSet)
+	
+	bestFeatureIndex = -1
+	bestInfoGain = 0.0		
+	for i in range(numFeature):
+		
+		#获取第i个特征的所有可能情况
+		featureValueList = [example[i] for example in dataSet]
+		featureValueSet = set(featureValueList)
+		
+		#计算每种情况的熵
+		newEntropy = 0.0
+		for key in featureValueSet:
+			subDataSet = splitDataSet(dataSet,i,key)
+			prob = len(subDataSet)/float(len(dataSet))
+			newEntropy += (prob * calcShannonEntropy(subDataSet))
+		#计算分割之后的信息增益	
+		infoGain = baseEntropy - newEntropy
+		
+		#更新
+		if infoGain > baseInfoGain:
+			bestInfoGain = infoGain
+			bestFeatureIndex = i
+
+	return bestFeatureIndex	
+
+
+-------------------------------------------------------------------------------------------------------------------------
+</pre>
 
 
 
