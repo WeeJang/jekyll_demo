@@ -50,15 +50,33 @@ title: Machine Learning in Theory::Naive Bayes
 	 P( <strong><i>W </i></strong> ) 指的是词集向量出现的概率，也是训练集合的数据统计出的。
 
         <strong>似然函数(likelihood function)</strong> 在数理统计学中，似然函数是一种关于统计模型中的参数的函数，表示模型中参数的似然性。“似然性”与“概率”的意思相近，都是指某种事件发生的可能性，
-	但是在统计学中，“似然性”与“概率”又有明确的区分，概率用于在已知一些参数的情况下，预测接下来的观测所得到的结果，而似然性则用于在已知某些观测所得到的结果时，对有关事物的性质的参数进行估计。 
+	但是在统计学中，“似然性”与“概率”又有明确的区分，概率用于在已知一些参数的情况下，预测接下来的观测所得到的结果，而似然性则用于在已知某些观测所得到的结果时，对有关事物的性质的参数进行估计。
+	就是说，在确定邮件的分类（是否是垃圾邮件）的前提下，它能生成某个内容的概率。其实，在这里，我更倾向于将其看作是一个<strong>先验概率</strong>
 		
 
 	<strong>后验概率：</strong> In Bayesian statistics, the posterior probability of a random event or an uncertain proposition is the conditional probability that is <strong>assigned after the 
 	relevant evidence or background is taken into account</strong>. Similarly, the posterior probability distribution is the probability distribution of an unknown quantity, treated as a 
 	random variable, conditional on the evidence obtained from an experiment or survey. "Posterior", in this context, means after taking into account the relevant evidence related to the particular 
 	case being examined.----from wiki
-	简单来讲：后验概率，就是在考虑观测数据下，推测事件发生的发生概率。
+	简单来讲：后验概率，就是在考虑观测数据下，推测事件发生的发生概率。P( <strong>C<sub>i </sub></strong> | <strong><i>W </i></strong>) 就是在观测到内容向量的前提下，所属分类的概率。
+
+	将上面的涉及到信息抽象化一点。
+	
+	对于想研究一个事件或是现象，我们最终想获得的是关于这个事件或现象的模型，分析出它的原因，还原事物的本质。在通信中，就是说，通过接受到的信号，还原出发送的信号。因为原始的发送信号，在信息的传输和表达
+	过程中，收到复杂多变的环境影响，导致失真。在概率论的层面上来进行分类时，也就是去验证各种“可能”的可能性大小。在这里，牵扯到两个概念：<strong><i>D </i></strong> (data:观测到的数据) <strong>H<sub>i </sub></strong>(hypothesis:对原型的猜测)，因此贝叶斯可以归结为：
+	    ----------------------------------------------------------------------------------------------------------------------------------
+        |                               P( <strong><i>D </i></strong>| <strong>H<sub>i </sub></strong> )*P( <strong>H<sub>i </sub></strong> )
+        |       P( <strong>H<sub>i </sub></strong> | <strong><i>D </i></strong>) = —————
+        |                               P( <strong><i>D </i></strong> )
+        ----------------------------------------------------------------------------------------------------------------------------------
+
 
 	
-
 </pre>
+
+<hr />
+
+
+
+
+
