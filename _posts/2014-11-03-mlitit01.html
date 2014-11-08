@@ -21,7 +21,7 @@ title: Machine Learning in Theory::Naive Bayes
 	3 准确度的含义
 	4 先验概率 后验概率
 	5 过拟合问题
-	
+	:
 	先考虑一个问题。假设设计一个邮件分类器（能够根据邮件内容将一些广告相关的邮件识别为垃圾邮件）。训练集是大量的做好标记<strong>C<sub>i</sub></strong>（这里为二元分类，是否为垃圾邮件）的邮件。
 	首先将邮件中词提取出来，获得一个词集向量<strong><i>W</i></strong>。朴素贝叶斯的方式，就是求出使 P(<strong>C<sub>i</sub></strong>|<strong><i>W</i></strong>) 最大的分类<strong>C<sub>i</sub></strong>
 	
@@ -48,7 +48,11 @@ title: Machine Learning in Theory::Naive Bayes
 	简单来讲：先验概率，就是不考虑观测数据，就某件事情发生的概率。“先验”并非先于一切经验（毕竟事件本身的成立情况也是由之前的经验和数据统计情况得出的），而是说先于当前的观测数据。在这个邮件分类器的
 	设计中，P( <strong>C<sub>i </sub></strong> ) 指给你一封邮件，你去猜它是否属于垃圾邮件。这个概率不考虑邮件本身的内容，也就是观测到的词集向量，凭借给的训练集合的数据计算出的。
 	 P( <strong><i>W </i></strong> ) 指的是词集向量出现的概率，也是训练集合的数据统计出的。
-        <strong>似然函数(likelihood function)</strong> 在数理统计学中，似然函数是一种关于统计模型中的参数的函数，表示模型中参数的似然性。“似然性”与“概率”的意思相近，都是指某种事件发生的可能性，但是在统计学中，“似然性”与“概率”又有明确的区分，概率用于在已知一些参数的情况下，预测接下来的观测所得到的结果，而似然性则用于在已知某些观测所得到的结果时，对有关事物的性质的参数进行估计。
+
+        <strong>似然函数(likelihood function)</strong> 在数理统计学中，似然函数是一种关于统计模型中的参数的函数，表示模型中参数的似然性。“似然性”与“概率”的意思相近，都是指某种事件发生的可能性，
+	但是在统计学中，“似然性”与“概率”又有明确的区分，概率用于在已知一些参数的情况下，预测接下来的观测所得到的结果，而似然性则用于在已知某些观测所得到的结果时，对有关事物的性质的参数进行估计。 
+		
+
 	<strong>后验概率：</strong> In Bayesian statistics, the posterior probability of a random event or an uncertain proposition is the conditional probability that is <strong>assigned after the 
 	relevant evidence or background is taken into account</strong>. Similarly, the posterior probability distribution is the probability distribution of an unknown quantity, treated as a 
 	random variable, conditional on the evidence obtained from an experiment or survey. "Posterior", in this context, means after taking into account the relevant evidence related to the particular 
