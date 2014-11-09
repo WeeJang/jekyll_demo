@@ -13,15 +13,8 @@ title: Machine Learning in Theory::Naive Bayes
 	大二的时候学习概率论，理学院的于老师给讲的。当时的课程没怎么好好听，最后也就考了85分左右，大部分的知识都是云里雾里。后来的通信原理，信息论，不少都是跟其息息相关。
 	所以现在，只能重新回顾，深入了解一番。
 
-	学过概率论相关课程的人，对贝叶斯绝对不会陌生。几乎每本相关的书上，上来就给扔出一个相关的贝叶斯公式。本人成绩也不好，学得也不是很深入，就记录一些我觉得引人入胜的东西。
+	学过概率论相关课程的人，对贝叶斯绝对不会陌生。几乎每本相关的书上，上来就给扔出一个相关的贝叶斯公式。本人成绩也不好，学得也不是很深入，所以就引自<a href="http://blog.csdn.net/pongba/article/details/2958094">平凡而又神奇的贝叶斯</a>就记录一些我觉得引人入胜的东西。
 
-	思路由以下几个方面：
-	1 为何要统计，为何要概率
-	2 预测 模型  
-	3 准确度的含义
-	4 先验概率 后验概率
-	5 过拟合问题
-	:
 	先考虑一个问题。假设设计一个邮件分类器（能够根据邮件内容将一些广告相关的邮件识别为垃圾邮件）。训练集是大量的做好标记<strong>C<sub>i</sub></strong>（这里为二元分类，是否为垃圾邮件）的邮件。
 	首先将邮件中词提取出来，获得一个词集向量<strong><i>W</i></strong>。朴素贝叶斯的方式，就是求出使 P(<strong>C<sub>i</sub></strong>|<strong><i>W</i></strong>) 最大的分类<strong>C<sub>i</sub></strong>
 	
@@ -159,7 +152,8 @@ title: Machine Learning in Theory::Naive Bayes
 	很大程度上，你会说，肯定是一个呀。第二个也太巧了，两个箱子的高度，颜色都相同，而且都恰好被树遮住了那么小的一部分。太巧了！
 	<strong>太巧了</strong>的含义是：P( <strong><i>D </i></strong>| <strong>H<sub>i </sub></strong> ) 趋向于 0 ，是一个小概率事件。
 
-	以上做的是<strong>似然估计</strong>，只看 P( <strong><i>D </i></strong>| <strong>H<sub>i </sub></strong> ) 的大小（即在有两个箱子的前提下，树正好遮住两个箱子的概率），而不考虑 P( <strong>H<sub>i </sub></strong> ) （有两个箱子的概率）这个先验概率。似然估计里面也蕴含奥卡姆剃刀：树后面的箱子越多，模型越复杂，单个箱子最简单，似然估计选择了最简单的模型。这也就是<strong>贝叶斯奥卡姆剃刀</strong>.因为这个
+	以上做的是<strong>似然估计</strong>，只看 P( <strong><i>D </i></strong>| <strong>H<sub>i </sub></strong> ) 的大小（即在有两个箱子的前提下，树正好遮住两个箱子的概率），而不考虑 P( <strong>H<sub>i </sub></strong> ) （有两个箱子的概率）这个先验概率。
+	似然估计里面也蕴含奥卡姆剃刀：树后面的箱子越多，模型越复杂，单个箱子最简单，似然估计选择了最简单的模型。这也就是<strong>贝叶斯奥卡姆剃刀</strong>.因为这个
 	剃刀工作在贝叶斯公式的似然估计 P( <strong><i>D </i></strong>| <strong>H<sub>i </sub></strong> ) 上，而不是模型本身 P( <strong>H<sub>i </sub></strong> ) 概率上（传统剃刀）
 
 
@@ -176,8 +170,43 @@ title: Machine Learning in Theory::Naive Bayes
 	那好，我们就看P( <strong><i>D </i></strong>| <strong>H<sub>i </sub></strong> ) 。假设我们用一个8阶多项式去拟合建模。我们知道，8阶多项式，越往后图形曲线弯曲越大，导数增长越快。那么8阶多项式在平面上
 	随机生成一堆N个点偏偏恰好近似成一条直线的概率（P( <strong><i>D </i></strong>| <strong>H<sub>8 </sub></strong> ) ）的概率有多大？太小太小了。
 	反之，如果是一个h1（直线）,概率就大得多了。
+
+
+---------------------------------------------------------------------------------
+
 </pre>
 
+<h5>[5] 样本的足够性问题</h5>
+
+<pre>
+
+	要得到好的概率分布，就需要足够的数据样本。由统计学知，如果每个特征需要 N 个样本，那么对于10个特征将需要 N<sup>10</sup> 个样本，对于包含1000个特征的词汇表将需要 N<sup>1000</sup> 个样本。可以看到，所
+	需要的样本数会随着特征数目增大而迅速增长。其实也是[2]的一个原因。现实中，我们没法拿到足够多的数据，多到能把模型与数据完美契合。
+	
+	如果特征之间相互独立，那么样本数就可以从 N<sup>1000</sup> 减少到 1000×N 。所谓<strong>独立</strong>指的是<strong>统计意义</strong>上的独立，即一个特征出现的可能性与它和其他单词相邻没有关系。当然我
+	们知道这种假设并不正确，但是简化了计算，而且效果也不错（想法很傻很天真，效果很好很强大）。这个假设正是朴素贝叶斯分类器中<strong>朴素</strong>(naive)的含义（叫天真不更好:P）。那么引出了Naive Bayes的
+	两个重要假设：
+	（1）<strong>特征之间相互独立</strong>
+	（2）<strong>特征同等重要</strong>
+	
+	这样，当我们对似然性
+
+	 ___________________________________________________________________
+	|
+	| P( <strong><i>D </i></strong>| <strong>H<sub>i </sub></strong> ) =<b>∏</b><sup>n</sup><sub>m=0</sub>   P( <strong>D<sub>m</sub> </strong>| <strong>H<sub>i </sub></strong> )
+	|___________________________________________________________________
 
 
+
+
+
+<hr />
+
+
+<a href="mailto:jangwee1@sina.com.cn">send a mail</a> to WeeJang for you feedback <br />
+<img src=/jekyll_demo/images/demo.png width="100" height="100"> <br />
+
+
+<p>{{ page.date | date_to_string }}</p>
+                                             
 
