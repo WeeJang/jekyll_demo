@@ -27,6 +27,7 @@ title: Machine Learning in Practice::Naive Bayes
 	要从文本中获取特征，首先要拆分文本。这里的特征也是来自文本的<strong>词条（token）</strong>，一个词条是字符的任意组合。可以把词条想象为单词，也可以使用非单词词条（如URL，IP地址
 	或者任意其他字符。然后将每一个文本片段表示为一个词条向量，其中值为 1 表示词条出现在文档中， 0 表示尚未出现在文档中。
 	
+
 def loadDataSet():
 	# 六条评论.split()
 	postingList = [ ['my','dog','has','flea','problem','help','please'],
@@ -62,11 +63,86 @@ def setOfWords2Vec(vocabList,inputSet):
 	return returnVec
 
 --------------------------------------------------------------------------------
+</pre>
 
+<h4>[2] 朴素贝叶斯分类器训练函数</h4>
 
+def trainNB0(trainMatrix,trainCategory):
+
+	#训练文本数	
+	numTrainDocs = len(trainMatrix)
+	#词集向量维度
+	numWords = len(trainMatrix[0])
+	
+	#先验概率P(A)
+	pAbusive = sum(trainCategory)/float(numTrainDocs)
+	#标记为0的文本所含词条累计
+	p0Num = zeros(numWords)
+	#标记为1的文本所含词条累计
+	p1Num = zeros(numWords)
+	
+	#标记为0的文本计数
+	p0Denom = 0.0
+	#标记为1的文本计数
+	p1Denom = 0.0
+	
+
+	for i in range(numTrainDocs):
+		# 如果文本被标记为1
+		if trainCategory[i] == 1:
+			p1Num += trainMatrix[i]
+			p1Denom += sum(trainMatrix[i])
+		else:
+			p0Num += trainMatrix[i]
+			p1Denom += sum(trainMatrix[i])
+
+	# P( <strong><i>D </i></strong>| <strong>H<sub>i </sub></strong> ) =<big>∏</big><sup>n</sup><sub>m=0</sub>   P( <strong>D<sub>m</sub> </strong>| <strong>H<sub>i </sub></strong> )
+ 	p0Vec = p0Num/p0Denom   #change to log()
+	p1Vec = p1Num/p1Denom	#change to log()
+	
+	return p0Vec,p1Vec,pAbusive
+			
+--------------------------------------------------------------------------------
+</pre>
+
+<h4>[3] 进一步修改分类器 </h4>
+
+<pre>
+	(1) 概率为零。似然计算<big>∏</big><sup>n</sup><sub>m=0</sub>   P( <strong>D<sub>m</sub> </strong>| <strong>H<sub>i </sub></strong> ) 如果其中一个概率值为0,那么最后的乘积也为零。为降低这种影响，可以将所有词
+	的出现次数初始化为1,并将分母初始化为2.
+
+<strong>modefy:</strong>
+
+	#标记为0的文本所含词条累计
+        p0Num = [1] * numWords
+        #标记为1的文本所含词条累计
+        p1Num = [1] * numWords
+	
+	
+	 #标记为0的文本计数
+        p0Denom = 2
+        #标记为1的文本计数
+        p1Denom = 2
+
+	
+
+	(2) 数据下溢出，这是由于太多很小的数相乘造成的。当计算乘积<big>∏</big><sup>n</sup><sub>m=0</sub>   P( <strong>D<sub>m</sub> </strong>| <strong>H<sub>i </sub></strong> ) 时，由于大部分因子都非常小，所以程序会下溢出或者得不到正确的答案。一个解决办法是对<strong>乘积取自然对数</strong>。在代数中，有 ln(a*b) = ln(a) + ln(b)。于是通过求对数可以避免下溢出或者浮点数舍入导致的错误。同时，采用自然对数进行处理不会有任何损失。它们的取值虽然不同，但不影响最终结果。
+
+<strong>modefy:</strong>
+	
+	p0Vect = log(p0Num/p0Denom)
+	p1Vect = log(p1Num/p1Denom)
+
+-------------------------------------------------------------------------------
 </pre>
 
 
-			
+
+
+				
+<hr />	
+<p> Welcome to contact <a href="mailto:jangwee1@sina.com.cn">me</a>,the friends who like Machine-Learning and Data-Mining.</p>
+<p> <a href=freedom.png>:)</a></p>
+
+<p>{{ page.date | date_to_string }}</p>
 	
-		
