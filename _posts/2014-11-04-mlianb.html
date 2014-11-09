@@ -1,0 +1,72 @@
+---
+layout: default
+title: Machine Learning in Practice::Naive Bayes
+---
+
+<h2>{{ page.title }}</h2>
+
+<hr />
+
+<h3> Naive Bayes 概述</h3>
+
+<pre>
+	关键词：分类·监督学习
+	
+	原理： 基于概率论的分类方式。通过计算后验概率，来选择可能性最大的一个分类。
+		这里使用的概率解释属于贝叶斯概率理论的范畴，该理论非常流行且效果良好。贝叶斯概率引入了<strong>先验知识</strong>和<strong>逻辑推理</strong>来处理不确定命题。也就是：
+		<strong> 后验概率 = 先验概率 × 似然  </strong>
+	
+</pre>
+
+<hr />
+
+<h3> 相关函数 </h3>
+
+<h4>[1] 由文本构建“词集”向量 </h4>
+<pre>
+	要从文本中获取特征，首先要拆分文本。这里的特征也是来自文本的<strong>词条（token）</strong>，一个词条是字符的任意组合。可以把词条想象为单词，也可以使用非单词词条（如URL，IP地址
+	或者任意其他字符。然后将每一个文本片段表示为一个词条向量，其中值为 1 表示词条出现在文档中， 0 表示尚未出现在文档中。
+	
+def loadDataSet():
+	# 六条评论.split()
+	postingList = [ ['my','dog','has','flea','problem','help','please'],
+			['maybe','not','take','him','to','dog','park','stupid'],
+			['my','dalmation','is','so','cute','i','love','him'],
+			['stop','posting','stupid','worthless','garbage'],
+			['mr','licks','ate','my','steak','how','to','stop','him'] 
+			['quit','buying','worthless','dog','food','stupid'] ]
+	
+	# 人工标注 1代表含有侮辱性文字 0 代表正常言论
+	classVec = [0,1,0,1,0,1]
+	return postingList,classVec
+
+#构建词集向量坐标
+def createVocabList(dataSet):
+	vocabSet = set([])
+	
+	for document in dataSet:
+		vocabSet = vocabSet | set(documentList)
+	
+	return vocabSet;
+
+#构建词集向量
+def setOfWords2Vec(vocabList,inputSet):
+	returnVec = [0] * len(vocabList)
+	
+	for elem in inputSet:
+		if elem in vocabList:
+			returnVec[vocabList.index(elem)] = 1
+		else:
+			print "the word : %s is not in my vocabulary! " %elem
+	
+	return returnVec
+
+--------------------------------------------------------------------------------
+
+
+</pre>
+
+
+			
+	
+		
