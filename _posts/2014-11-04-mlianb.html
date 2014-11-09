@@ -120,15 +120,15 @@ def trainNB0(trainMatrix,trainCategory):
         #标记为1的文本所含词条累计
         p1Num = [1] * numWords
 	
-	
 	 #标记为0的文本计数
         p0Denom = 2
         #标记为1的文本计数
         p1Denom = 2
 
 	
-
-	(2) 数据下溢出，这是由于太多很小的数相乘造成的。当计算乘积<big>∏</big><sup>n</sup><sub>m=0</sub>   P( <strong>D<sub>m</sub> </strong>| <strong>H<sub>i </sub></strong> ) 时，由于大部分因子都非常小，所以程序会下溢出或者得不到正确的答案。一个解决办法是对<strong>乘积取自然对数</strong>。在代数中，有 ln(a*b) = ln(a) + ln(b)。于是通过求对数可以避免下溢出或者浮点数舍入导致的错误。同时，采用自然对数进行处理不会有任何损失。它们的取值虽然不同，但不影响最终结果。
+	(2) 数据下溢出，这是由于太多很小的数相乘造成的。当计算乘积<big>∏</big><sup>n</sup><sub>m=0</sub>   P( <strong>D<sub>m</sub> </strong>| <strong>H<sub>i </sub></strong> ) 时，由于大部分因子都非常小，所以程序会下溢出或者得不到正确的答案。
+	一个解决办法是对<strong>乘积取自然对数</strong>。在代数中，有 ln(a*b) = ln(a) + ln(b)。于是通过求对数可以避免下溢出或者浮点数舍入导致的错误。
+	同时，采用自然对数进行处理不会有任何损失。它们的取值虽然不同，但不影响最终结果。
 
 <strong>modefy:</strong>
 	
@@ -138,10 +138,58 @@ def trainNB0(trainMatrix,trainCategory):
 -------------------------------------------------------------------------------
 </pre>
 
+<h4>[4] 朴素贝叶斯分类函数</h4>
+
+<pre>
+def classifyNB(vec2Classify, p0Vec, p1Vec, pClass1):
+	
+	
+	p0 = sum(vec2Classify * p0Vec) + log(1-pClass1)
+	p1 = sum(vec2Classify * p1Vec) + log(pClass1)
+	
+	if p0 > p1 :
+		return 0
+	else:
+		return 1
 
 
+-------------------------------------------------------------------------------
+</pre>
 
+<h4>[5] 词袋模型 </h4>
+
+<pre>
+	到目前为止，我们将每个词的出现与否作为一个特征，这可以被描述为<strong>词集模型（set-of-words model)</strong>。如果一个词在文档中不止出现一次，这可能意味着包含该词是否出现在文档中所不能表达的信息，
+	这钟方法被称为<strong>词袋模型（bag-of-words model）</strong>。在词袋中，每个单词可以多次，而在词集中，每个词只能出现一次。
+
+def bagOfWords2VecMN(vocabList,inputSet):
+	returnVec = [1] * len(vocabList)
+	
+	for words in inputSet:
+		if words in vocabList:
+			returnVec[vocabList.index(words)] += 1
+	
+	return returnVec
+
+-------------------------------------------------------------------------------
+</pre>
+
+<h4>[6] 交叉验证</h4>
+
+<pre>
+	分类器所需要的概率计算只利用训练集中的文档来完成。随机选择数据的一部分作为训练集，而剩余部分作为测试集的过程为<strong>留存交叉验证（hold-out cross validation)</strong>.
+
+------------------------------------------------------------------------------
+</pre>
 				
+<h4>[7] 文本处理的一些小问题</h4>
+
+<pre>
+	<strong>停用词表</strong>词汇表中的一小部分单词缺占据了所有文本用词的一大部分。产生这种现象的原因是因为语言中的大部分都是冗余和结构辅助性内容。常用的方法移除高频词，同时从某个预订词表中移除
+	结构上的辅助词。
+</pre>
+
+
 <hr />	
 <p> Welcome to contact <a href="mailto:jangwee1@sina.com.cn">me</a>,the friends who like Machine-Learning and Data-Mining.</p>
 <p> <a href=freedom.png>:)</a></p>
