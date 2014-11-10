@@ -1,0 +1,56 @@
+---
+layout: default
+title: Machine Learning in Action::Logistic Regression
+---
+
+<h2>{{ page.title }}</h2>
+
+<hr />
+
+<h2> Logistic Regression 概述</h2>
+
+<pre>
+	关键词：最优化算法·监督学习
+	
+	原理:	根据现有数据对分类边界线建立回归公式,以此进行分类.
+		假设现在有一些数据点,我们用一条曲线对这些点进行拟合(该线成为最佳拟合曲线),这个拟合过程就是回归.这里的"回归"一词源于最佳拟合,表示要找的最佳拟合参数集合.
+		训练分类器时的做法就是<strong>寻找最佳拟合参数,使用的是最优化算法</strong>.
+
+</pre>
+
+<hr />
+
+<h2> LR 核心算法代码实现 </h2>
+
+<h3>[1] LR 梯度下降算法 </h3>
+
+<pre>
+
+#便利函数
+def loadDataSet():
+	
+	dataMat = [] #[x1,x2,x3]
+	labelMat = []
+	fr = open('test.txt','r')
+	
+	for line in fr.readLines():
+		lineArr = line.strip().split('\t')
+		dataMat.append([1.0,float(lineArr[0]),float(lineArr[1])])
+		labelMat.append(int(lineArr[2]))
+	
+	return dataMat,labelMat
+
+# sigmoid 函数
+def sigmoidFunc(intX):
+	
+	return 1.0 / (1 + exp( -inX ) )
+
+
+#LR 梯度下降算法初始版
+# 
+
+def gradDescent(dataMatIn, classLabels):
+	
+	
+	
+</pre>
