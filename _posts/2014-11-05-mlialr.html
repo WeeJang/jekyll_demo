@@ -52,6 +52,17 @@ def sigmoidFunc(intX):
 #			<i>w</i> - α * <i>x</i><sup>T</sup> * ( h<sub>w</sub>(<i> x </i>) - <i>y</i> ) </strong></big>
 #           }
 
+函数名称:
+	gradDescent(dataMatIn,classLabels)
+函数功能:
+	梯度下降实现(初始版),最优化回归系数,跳出条件,达到最大迭代次数
+	学习率硬编码
+输入参数:
+	dataMatIn : 训练集特征矩阵(m*n m:样本数 n:特征数) : mat or array or list
+	classLabels : 训练集标签(m*1 m:样本数) : mat or array or list
+输出参数:
+	weight : 最优回归系数(n*1  n:特征数) : array
+
 def gradDescent(dataMatIn, classLabels):
 	
 	#训练集特征matrix化[m*n] 
@@ -84,10 +95,105 @@ def gradDescent(dataMatIn, classLabels):
 		weight = weight - alpha * sampleFeatureDataMatrix.transpose()*error
 	
 	return weight
-		
 	
+------------------------------------------------------------------------------	
 </pre>
 
+
+<h3>[2] 改进的随机梯度下降算法</h3>	
+	
+<pre>
+	[1]中实现的梯度下降算法在每次更新回归系数时,都要遍历整个数据集合,该方法在处理100个左右的数据集合(这里应该是说针对单机来讲,大型的分布式计算方案能够支撑更大的量级)
+	时尚可,但如果有数十亿个样本和成千上万的特征,那么该特征的计算复杂度就太高了.一个改进方法是<strong>一次仅用一个样本点来更新回归系数</strong>,该方法称为<i>随机梯度上升算法</i>.
+	由于可以在样本到来时,对分类器进行增量式更新,因此这是一个<strong>在线学习算法</strong>.[1]所运用的一次处理所有数据的方式称作是<strong>批处理</strong>
+	
+
+函数名称:
+        stocGradDescent(dataMatIn,classLabels)
+函数功能:
+        梯度下降实现改进1,在线学习，跳出条件，学习完全部样本
+        学习率硬编码
+输入参数:
+        dataMatIn : 训练集特征矩阵(m*n m:样本数 n:特征数) : mat or array or list
+        classLabels : 训练集标签(m*1 m:样本数) : mat or array or list
+输出参数:
+        weight : 最优回归系数(n*1  n:特征数) : array
+
+
+def stocGradDescent0(dataMatrix,classLabels):
+	
+	m,n = shape(dataMatrix)
+	alpha = 0.001
+
+	#将weight 初始化为行向量	
+	weight = ones(n)
+	
+	for i in range(m):
+		# arrary * array = 对应位置相乘 array([a,b,c]) * array([e,d,f]) = array([ae,bd,cf])
+		h = sigmoid(sum(dataMatrix[i]*weight)) 
+		# error
+		error = h - classLabels[i]
+		#update weight
+		weight = weight - alpha * dataMatrix[i] * error
+	
+	return weight
+
+	[2]与[1]的区别有两点：
+	[1] 中 h 与 error 均为向量，[2]中为数值。这是因为[1]是全部样本的批处理
+	[2] 没有矩阵转换（转秩）的过程，所有变量的数据类型都是Numpy数组。
+
+	
+	<big>如何判断一个优化算法的优劣呢？</big>
+	一个比较靠谱的方法是看它是否<big><strong>收敛（速度）</strong></big>,也就是说参数是否达到了稳定值，是否还会不断的变化。
+	所以可以绘图将系数随迭代次数的变化情况展示出来。
+
+ 	通过一定程度的不同迭代次数之后，系数达到了稳定值。值得注意的是，在大的波动停止之后，还有一些小的周期波动。产生这种现象的原因是：
+	<strong>存在一些不能被正确分类的样本点（数据集并非线性可分），在每次迭代时会引发系数的剧烈改变。</strong>我们期望算法能够避免来回波动，
+	从而收敛到某值。另外，收敛速度也需要加快。
+		 
+-------------------------------------------------------------------------------
+</pre>
+
+<h3>[3] 改进的随机梯度上升算法</h3>
+
+<pre>
+
+def stocGradDescent1(dataMatrix,classLabels,numIter=150):
+	
+	#get number of sample,feature
+	m,n = shape(dataMatrix)
+	
+	#regression reference
+	weights = ones(n)	
+
+	#最大迭代次数
+	for iter in range(numIter):
+		# 样本集标号
+		dataIndex = range(m)
+		# 迭代整个样本空间 随机
+		for i in range(m):
+			#学习率 可变
+			alpha = 4/(1.0+i+iter) + 0.01
+			#样本集标号的list的下标
+			randomIndex = int(random.uniform(0,len(dataIndex)))
+			# 随机获得的样本集下标
+			randomDataIndex = dataIndex[randomIndex]
+			
+			h = sigmoid(sum(dataMatrix[randomDataIndex]*weights)
+			error = h - classLabels[randomDataIndex]
+			weights = weights - alpha * error * dataMatrix[randomDataIndex]
+	
+	return weights
+		
+
+</pre>
+
+
+<h3>[3] 上升还是下降? </h3>
+
+<pre>
+	最优化的根本是针对代价函数(Cost Function),最小化代价函数推导简化之后,得到的函数,最大化的就要用梯度上升,最小化的话,就要用梯度下降.
+</pre>
 
 
 
