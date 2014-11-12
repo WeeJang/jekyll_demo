@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Machine Learning in Practice::Naive Bayes
+title: Machine Learning in Action::Naive Bayes
 ---
 
 <h2>{{ page.title }}</h2>
@@ -41,6 +41,7 @@ def loadDataSet():
 	classVec = [0,1,0,1,0,1]
 	return postingList,classVec
 
+
 #构建词集向量坐标
 def createVocabList(dataSet):
 	vocabSet = set([])
@@ -49,6 +50,9 @@ def createVocabList(dataSet):
 		vocabSet = vocabSet | set(documentList)
 	
 	return vocabSet;
+
+
+
 
 #构建词集向量
 def setOfWords2Vec(vocabList,inputSet):
@@ -68,6 +72,17 @@ def setOfWords2Vec(vocabList,inputSet):
 <h4>[2] 朴素贝叶斯分类器训练函数</h4>
 
 <pre>
+函数名称：
+	trainNB0(trainMatrix,trainCategory)
+函数功能：
+	朴素贝叶斯分类训练
+输入参数：
+	trainMatrix : 训练特征集 ： mat
+	trainCategory : 训练标签集 ： list
+输出参数：
+	p0Vec,p1Vec,pAbusive ： 0-class似然值 1-class似然值 A先验概率
+
+
 
 def trainNB0(trainMatrix,trainCategory):
 
@@ -141,6 +156,21 @@ def trainNB0(trainMatrix,trainCategory):
 <h4>[4] 朴素贝叶斯分类函数</h4>
 
 <pre>
+函数名称：
+	classifyNB(vec2Classify,p0Vec,p1Vec,pClass1)
+函数功能：
+	利用先验概率已经似然性，进行朴素贝叶斯分类
+输入参数：
+	vec2Classify : 要分类样本的特征向量 ： arrary  or mat
+	p0Vec : 特征向量|0-class 的概率 ： array 
+	p1Vec : 特征向量|1-class 的概率 ： array
+	pClass1 : 1-class 的先验概率 ： float
+
+输出参数：
+	0 ： 分类为0-class 
+	1 ： 分类为1-class
+
+
 def classifyNB(vec2Classify, p0Vec, p1Vec, pClass1):
 	
 	
@@ -156,11 +186,12 @@ def classifyNB(vec2Classify, p0Vec, p1Vec, pClass1):
 -------------------------------------------------------------------------------
 </pre>
 
-<h4>[5] 词袋模型 </h4>
+	<h4>[5] 词袋模型 </h4>
 
 <pre>
 	到目前为止，我们将每个词的出现与否作为一个特征，这可以被描述为<strong>词集模型（set-of-words model)</strong>。如果一个词在文档中不止出现一次，这可能意味着包含该词是否出现在文档中所不能表达的信息，
 	这钟方法被称为<strong>词袋模型（bag-of-words model）</strong>。在词袋中，每个单词可以多次，而在词集中，每个词只能出现一次。
+
 
 def bagOfWords2VecMN(vocabList,inputSet):
 	returnVec = [1] * len(vocabList)
