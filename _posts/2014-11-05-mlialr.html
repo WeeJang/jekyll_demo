@@ -154,9 +154,24 @@ def stocGradDescent0(dataMatrix,classLabels):
 -------------------------------------------------------------------------------
 </pre>
 
-<h3>[3] 改进的随机梯度上升算法</h3>
+<h3>[3] 改进的随机梯度下降算法</h3>
 
 <pre>
+
+函数名称:
+        stocGradDescent1(dataMatrix,classLabels,numIter=150)
+函数功能:
+        梯度下降实现改进2 
+        学习率随迭代次数，以及样本选择次数增加而下降（并非严格下降）
+	随机选区样本进行学习
+输入参数:
+        dataMatrix: 训练集特征矩阵(m*n m:样本数 n:特征数) : mat or array or list
+        classLabels : 训练集标签(m*1 m:样本数) : mat or array or list
+	numIter = 150 : 最大迭代次数 默认为150 : int 
+输出参数:
+        weights : 最优回归系数(n*1  n:特征数) : array
+
+
 
 def stocGradDescent1(dataMatrix,classLabels,numIter=150):
 	
@@ -173,9 +188,9 @@ def stocGradDescent1(dataMatrix,classLabels,numIter=150):
 		# 迭代整个样本空间 随机
 		for i in range(m):
 			#学习率 可变
-			alpha = 4/(1.0+i+iter) + 0.01
+			<strong>alpha = 4/(1.0+i+iter) + 0.01</strong>       #①
 			#样本集标号的list的下标
-			randomIndex = int(random.uniform(0,len(dataIndex)))
+			randomIndex = int(random.uniform(0,len(dataIndex)))  #②
 			# 随机获得的样本集下标
 			randomDataIndex = dataIndex[randomIndex]
 			
@@ -184,15 +199,49 @@ def stocGradDescent1(dataMatrix,classLabels,numIter=150):
 			weights = weights - alpha * error * dataMatrix[randomDataIndex]
 	
 	return weights
-		
+	
+	第一处改进在① 处。一方面，alpha 在每次迭代的时候都会调整，这会缓解迭代时的数据波动或者高频波动。另外，虽然alpha会随着迭代次数不断减小，但永远不会减小到0,这是因为① 中还存在一个常数项。
+	必须这样做的原因是为了保证在多次迭代之后新数据仍然具有一定影响。如果要处理的问题是动态变化的，那么可以适当加大上述常数项，来确保新的值获得更大的回归系数。另一点值得注意的是，在降低
+	alpha的函数中，alpha 每次减少 1/(i+iter) 其中iter 是迭代次数，i 是样本点的下标。当 iter &lt&lt max(i) 时，alpha就不是严格下降了的。避免参数的严格下降也常见与模拟退火算法等其他优化算法中。
+	
+	第二处改动在② 处。这里通过随机选取样本来更新回归系数。这种方法将减少周期性的波动。具体实现方法即每次随机从列表中选出一个值，然后从列表中删掉该值，再进行下一次迭代。			
 
+
+
+------------------------------------------------------------------------------------------
 </pre>
 
 
-<h3>[3] 上升还是下降? </h3>
+<h3>[4] 上升还是下降? </h3>
 
 <pre>
+
 	最优化的根本是针对代价函数(Cost Function),最小化代价函数推导简化之后,得到的函数,最大化的就要用梯度上升,最小化的话,就要用梯度下降.
+
+
+------------------------------------------------------------------------------------------
+</pre>
+
+<h3>[5] 如何处理样本数据缺失问题 ？ </h3>
+
+<pre>
+	先给出一些可选的做法：
+		·使用可用特征的均值来填补缺失值
+		·使用特殊值来填补缺失值，如 -1 ，0
+		·忽略有缺失值的样本
+		·使用相似样本的均值添补缺失值
+		·使用另外的机器学习算法预测缺失值
+
+	
+	对于LR，缺失的特征值，用实数0来替换。why ?
+		回归系数的迭代更新公式： weights = weights - alpha * error * dataMatrix[randDataIndex]
+	因为dataMatrix[randDataIndex]=0 所以 weights = weights 不会进行更新。
+	另外 sigmoid(0)=0.5 ,即他对结果的预测不会有任何倾向性，因此上述的做法也不会对误差项造成任何影响。
+         
+	对于缺失类别标签的数据，直接丢弃。	
+	
+
+
 </pre>
 
 
