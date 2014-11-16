@@ -1,0 +1,215 @@
+---
+layout: default
+title: Machine Learning in Action::Logistic Regression
+---
+
+<h2>{{ page.title }}</h2>
+
+<hr />
+
+<h2> Logistic Regression 概述</h2>
+
+<pre>
+	关键词：最优化算法·监督学习
+	
+	原理 : 将分类问题转化为寻找最佳分割超平面，然后归结为凸优化问题，并利用核技巧将非线性问题转化为线性问题。
+	 	二次规划的解决方案：KKT条件。
+		快速实现方案：SMO算法。 
+
+</pre>
+
+<hr />
+
+<h2> SMO 简化版代码实现 </h2>
+
+<h3>[1] 便利函数 </h3>
+
+<pre>
+#函数名称：
+#	ParseDataFile()
+#函数功能：
+#	解析文本数据，便利函数	
+#输入参数： 
+#	void
+#输出参数：
+#	 trainFeature,trainLabels ： 训练特征集，训练标签集合 : mat mat
+def ParseDataFile():
+	
+	fr = open('svm_train_txt','r')
+	trainFeature = []
+	trainLabels = []
+	for line in fr.readlines():
+		line = line.strip().split('\t')
+		sampleFeature = [float(line[0]),float(line[1])]
+		trainFeature.append(sampleFeature)
+		trainLabels.append(float(line[-1]))
+	
+	return trainFeature,trainLabels
+
+
+
+#函数名称：
+#	RandomlyGetItem(i,m)
+#输入参数：
+#	 i,m : 排除的第i项，共有m个数据
+#返回参数：
+#	随机选区的非i项
+def RandomlyGetItem(i,m):
+	j = i
+	while(j == i):
+		j = int(random.uniform(0,m))
+	return j
+
+
+	
+------------------------------------------------------------------------------	
+</pre>
+
+
+<h3>[2] SMO算法实现简化版</h3>	
+	
+<pre>
+
+#函数名称：
+#	SimpleSMO(trainFeature,trainLabels,C=0.6,toler=0.001,max_iter=40)
+#函数功能：
+#	smo算法简单实现版：
+#	step1 选择违反kkt的一项 和 随机选另一项
+#	step2 解析求值进行优化
+#输入参数：
+#	trainFeature : 输入特征集 ： array
+#	trainlabels : 输入标签集  ： array
+#	C : 权衡系数 ： float
+#	toler :  误差度 ： float
+#	max_iter : 最大迭代次数 ：int
+#返回参数：
+#	alphas : 最优化回归系数 ： mat 
+#	b ： 最优化截距 ： float
+def SimpleSMO(trainFeature,trainLabels,C=0.6,toler=0.001,max_iter=40):
+	
+	#训练集特征
+	trainFeaturesMat = mat(trainFeature)
+	#训练集标签
+	trainLabelsMat = mat(trainLabels).transpose()
+	
+	#获取数据集大小
+	m,n = shape(trainFeaturesMat)	
+	#初始化alpha参数
+	alpha = mat(ones((m,1)))
+
+	#截距
+	b = 0.0
+	#迭代次数
+	iter = 0
+
+	#外层循环-最大迭代次数 如果没有alpha不发生改变，空循环一次，iter+1
+	while(iter < max_iter):
+		
+		#记录改变的alpha对数
+		alphaPairChanged = 0
+		
+		for i in range(m):
+			
+			#fXi为对第i个样本的预测值
+			fXi = float(multiply(alpha,trainLabelsMat).T * (trainFeaturesMat * (trainFeaturesMat[i,:].T))) + b
+			
+			#第i个样本的预测值与标记的误差
+			Ei = fXi - trainLabelsMat[i]
+		
+			#检查其是否严重违反KKT条件
+			if ( (alpha[i] > 0)and(trainLabelsMat[i]*Ei > toler) ) or ( (alpha[i] < C)and(trainLabelsMat[i]*Ei < -toler) ):
+				
+				#随机选择另一个样本j
+				j = RandomlyGetItem(i,m)
+				#预测j的分类
+				fXj = float(multiply(alpha,trainLabelsMat).T * (trainFeaturesMat * (trainFeaturesMat[i,:]).T)) + b
+				#误差计算
+				Ej = fXj - trainLabelsMat[i]
+				
+				#备份原数据
+				alphaIOld = alpha[i].copy()
+				alphaJOld = alpha[j].copy()
+				
+				#确定剪辑区间
+				L = 0.0
+				H = 0.9
+				# labels_i labels_j 同号
+				if (trainLabelsMat[i] == trainLabelsMat[j]):
+					L = max( 0 , alphaIOld + alphaJOld - C)
+					H = min( C , alphaIOld + alphaJOld)
+				else:
+					L = max( 0 , alphaJOld - alphaIOld)
+					H = min( C , alphaJOld - alphaIOld + C)	
+				
+				if L == H:
+					continue
+								
+				# eta 计算  eta = K11 + K22 - 2*K12 =||空间映射(i) - 空间映射(j) ||			
+				eta = trainFeaturesMat[i,:] * trainFeaturesMat[i,:].T + trainFeaturesMat[j,:] * trainFeaturesMat[j,:].T - 2*trainFeaturesMat[i,:]*trainFeaturesMat[j,:].T
+				#检验eta
+				if eta <= 0 :
+					continue
+				
+				
+				# 更新a_j 未剪辑
+				alpha[j]  +=  trainLabelsMat[j]*(Ei - Ej)/(eta)
+
+				#进行剪辑
+				if alpha[j] < L :
+					alpha[j] = L
+				elif alpha[j] > H :
+					alpha[j] = H
+				
+				
+				#检验更新步长：
+				if abs(alpha[j] - alphaJOld) < 0.00001:
+					#跳出此内循环，重新选择J样本
+					continue		
+								
+					
+				# 更新a_i 
+				alpha[i] += trainLabelsMat[i]*trainLabelsMat[j]*(alphaJOld - alpha[j])
+
+			
+				#更新b
+				b1 = b - Ei - trainLabelsMat[i] * (trainFeaturesMat[i,:] * trainFeaturesMat[i,:].T) * (alpha[i] - alphaIOld) \
+					    - trainLabelsMat[j] * (trainFeaturesMat[j,:] * trainFeaturesMat[i,:].T) * (alpha[j] - alphaJOld)
+
+				b2 = b - Ej - trainLabelsMat[i] * (trainFeaturesMat[i,:] * trainFeaturesMat[i,:].T) * (alpha[i] - alphaIOld) \
+					    - trainLabelsMat[j] * (trainFeaturesMat[j,:] * trainFeaturesMat[j,:].T) * (alpha[j] - alphaJOld)
+
+					
+				if ( alpha[i] > 0 ) and ( alpha[i] < C ):
+					b = b1
+				elif ( alpha[j] > 0 ) and ( alpha[j] < C ):
+					b = b2
+				else :
+					b = ( b1 + b2 ) / 2
+				
+				
+				alphaPairChanged += 1
+				
+			if ( alphaPairChanged == 0 ):
+				iter += 1
+			else :
+				iter = 0
+
+		return alpha,b	
+				
+
+
+
+	
+
+
+-------------------------------------------------------------------------------
+</pre>
+
+
+
+<hr />
+<p> Welcome to contact <a href="mailto:jangwee1@sina.com.cn">me</a>,the friends who like Machine-Learning and Data-Mining.</p>
+<p> <a href=freedom.png>:)</a></p>
+
+<p>{{ page.date | date_to_string }}</p>
+
