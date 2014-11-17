@@ -1,0 +1,136 @@
+---
+layout: default
+title: Machine Learning in Action::SVM_SMO_COMPELET
+---
+
+<h2>{{ page.title }}</h2>
+
+<hr />
+
+<h2> SVM 概述</h2>
+
+<pre>
+	关键词：最优化算法·监督学习
+	
+	原理 : 将分类问题转化为寻找最佳分割超平面，然后归结为凸优化问题，并利用核技巧将非线性问题转化为线性问题。
+	 	二次规划的解决方案：KKT条件。
+		快速实现方案：SMO算法。 
+
+</pre>
+
+<hr />
+
+<h2> SMO 完整版代码实现 </h2>
+
+<h3>[1] 成员函数 </h3>
+
+<pre>
+
+# 定义优化参数结构体
+# 参数列表
+# trainFeaturesMat : 训练特征集合 : mat
+# trainLabelsMat : 训练标签集合 : mat
+# C : 调和系数 : float
+# toler : 可接受误差 : float
+# m : 样本数量 : int
+# alphas : alpha优化系数向量 : mat[float]
+# b : b优化截距 ： float
+# eCache : 缓存列表，缓存预测误差 ： mat[isCalculted(boolen : 1/0 ),Ei(float)]
+
+
+class optStruct:
+	def __init__(self,trainFeaturesMat,trainLabelsMat,C,toler):
+		self.trainFeaturesMat = trainFeaturesMat
+		self.trainLabelsMat = trainLabelsMat
+		self.C = C
+		self.toler = toler
+		self.m = shape(trainFeaturesMat[0])
+		self.alphas = mat(zeros((self.m,1)))
+		self.b = 0.0
+		self.eCache = mat(zeros((self.m,2)))
+
+
+
+#函数名称:
+#	calcEk(oS,k)
+#函数功能：
+#	计算预测误差
+#输入参数：
+#	oS : 优化参数结构体变量 
+#	k  : 需要计算的样本索引 ： int
+#返回参数：
+#	返回索引为k的样本的误差
+
+#这个是根据实际改动的，本人认为书上的代码实现存在错误。eCache本来做保存误差缓存之用，当alphas中的任何一项出现变动之后，都必须重新更新
+def getEk(oS,k):
+	#先检查eCache中是否有效
+	if oS.eCache[k,0]:
+		return oS.eCache[k,1]
+	
+	#如果缓存中的数据无效，计算预测值
+	fXk = float(multiply(oS.alphas,oS.trainLabelsMat).T * (oS.trainFeaturesMat*(oS.trainFeaturesMat[k,:].T))) - oS.b
+	#计算误差
+	Ek = fXk - float(oS.trainLabelsMat[k])
+	#更新缓存
+	oS.eCache[k] = [1,Ek]
+	return Ek
+
+
+
+#函数名称：
+#	selectSecondAlpha(i,oS,Ei)
+#函数功能：
+#	选择第二个优化变量
+#输入参数：
+#	i : 第一个优化变量索引 ： int
+#	oS ： 优化参数结构体变量 : optStruct
+#	Ei : 第一个优化变量的预测误差 ： float
+#输出参数：
+#	返回最佳选择的第二个优化变量的索引 : int
+
+def selectSecondAlphas(i,oS,Ei):
+	
+	maxJ = -1 
+	maxDelta = 0.0
+	Ej = 0.0
+
+	Ei = getEk(oS,i)
+	
+	#先从当前有效中进行选择
+	validEcacheList = nonzero(oS.eCache[:,0].A)[0]
+	
+	#选区步长最大
+	if (len(validEcccheList)) > 1 :
+		for j in validEcacheList :
+			if j == i :
+				continue
+			Ej = getEk(oS,j)
+			tempDelta = abs(Ei - Ej)
+			if tempDelta > maxDelta:
+				maxDelta = tempDelta
+				maxJ = j
+	
+	#第一次，随机选取	
+	else:
+		j = i
+		while(j == i):
+			j = int(random.uniform(0,oS.m))
+		
+		maxJ = j
+		Ej = getEk(oS,j)
+	return maxJ,Ej
+
+
+	
+------------------------------------------------------------------------------	
+</pre>
+
+
+
+
+<hr />
+<p> Welcome to contact <a href="mailto:jangwee1@sina.com.cn">me</a>,the friends who like Machine-Learning and Data-Mining.</p>
+<p> <a href=freedom.png>:)</a></p>
+
+<p>{{ page.date | date_to_string }}</p>
+
