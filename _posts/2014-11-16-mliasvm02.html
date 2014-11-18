@@ -22,10 +22,9 @@ title: Machine Learning in Action::SVM_SMO_COMPELET
 
 <h2> SMO 完整版代码实现 </h2>
 
-<h3>[1] 成员函数 </h3>
+<h3>完整代码 </h3>
 
 <pre>
-
 # 定义优化参数结构体
 # 参数列表
 # trainFeaturesMat : 训练特征集合 : mat
@@ -71,8 +70,8 @@ def getEk(oS,k):
 	fXk = float(multiply(oS.alphas,oS.trainLabelsMat).T * (oS.trainFeaturesMat*(oS.trainFeaturesMat[k,:].T))) - oS.b
 	#计算误差
 	Ek = fXk - float(oS.trainLabelsMat[k])
-	#更新缓存
-	oS.eCache[k] = [1,Ek]
+	#更新缓存--无效原因是为了保证当更新alpha对儿时才对对应的eCache进行更新。这个地方其实一直存在疑问。原书也没有给出好的解释。还是哥没理解？FK
+	#反思×2:
 	return Ek
 
 
@@ -88,7 +87,7 @@ def getEk(oS,k):
 #输出参数：
 #	返回最佳选择的第二个优化变量的索引 : int
 
-def selectSecondAlphas(i,oS,Ei):
+def selectSecondAlpha(i,oS,Ei):
 	
 	maxJ = -1 
 	maxDelta = 0.0
@@ -120,6 +119,169 @@ def selectSecondAlphas(i,oS,Ei):
 		Ej = getEk(oS,j)
 	return maxJ,Ej
 
+#函数名称：
+#	updateEk(oS,k)
+#函数功能：
+#	当一对alpha更新后，要更新对应的误差缓存
+#输入参数：
+#	oS : 优化参数结构体 ：optStruct
+#	k : 更新第k个alpha对应的误差缓存
+#返回参数：
+#	void 无
+
+def updataEk(oS,k):
+	
+	#计算预测值
+	fXk = float(multiply(oS.alphas,oS.trainLabesMat).T * (oS.trainFeaturesMat * oS.trainFeaturesMat[k,:])) - oS.b
+	#误差计算
+	Ek = fXk - oS.trainLabelsMat[k]
+	
+	oS.eCache[k] = [1,Ek]
+
+
+#函数名称：
+#	innerLoop(i,oS)
+#函数功能：
+#	内层循环，选定Second Alpha 进行更新
+#输入参数：
+#	i : First Alpha的索引号 ： int
+#	oS : 优化数据结构体 ： optStruct
+#输出参数：
+#	更新alphas 的个数/2 （pairs数）
+
+def innerLoop(i,oS):
+	
+	#获取First Alpha 的预测误差
+	Ei = getEk(i)
+	#判断是否违反KKT条件
+	if (( oS.alphas[i] &gt; 0)and( oS.trainLabels[i]*Ei &gt; os.toler)) or (( os.alphas[i] &lt; C)and( os.trainLabels[i])*Ei &lt; -toler):
+		#违反,选择第Second Alpha,获取其预测误差
+		j,Ej = selectSecondAlpha(i,oS,Ei) 
+		
+		#alpha pair备份
+		alphaIOld = oS.alphas[i].copy()
+		alphaJOld = oS.alphas[j].copy()
+		
+		#确定剪辑区间
+		if oS.trainLabelsMat[i] == oS.trainLabelsMat[j]:
+			L = max( 0.0 , oS.alphas[i] + oS.alphas[j] - oS.C)
+			H = min( oS.C , oS.alphas[i] + oS.alphas[j] )	
+		else:
+			L = max( 0.0 , oS.alphas[j] - oS.alphas[i] )
+			H = min( C , oS.alphas[j] - oS.alphas[i] + C )
+		
+		# 
+		if L == H :
+			print "L == H" 
+			return 0
+
+		#eta计算 eta = k11 + k22 - 2*k12
+		#Kernel(x,y) 内积计算
+		Kii = oS.trainFeaturesMat[i,:] * oS.trainFeaturesMat[i,:].T
+		Kjj = oS.trainFeaturesMat[j,:] * oS.trainFeaturesMat[j,:].T
+		Kij = oS.trainFeaturesMat[i,:] * oS.trainFeaturesMat[j,:].T
+		eta = Kii + Kjj - 2*Kij
+	
+		if eta &lt;= 0 :
+			print "eat &lt;= 0"
+			return 0
+d
+		
+		#updata alpha[j] 
+		oS.alphas[j] += oS.trainLabelsMat[j] * (Ei - Ej) / eta
+		
+		#对alphas[j]进行剪辑
+		if oS.alphas[j] &lt; L :
+			oS.alphas[j] = L
+		elif oS.alphas[j] &gt; H :
+			oS.alphas[j] = H
+		
+		#观察变动状况
+		if abs(oS.alphas[j] - alphaJOld) &lt; 0.0001:
+			#改变幅度很小，还原
+			oS.alphas[j] = alphaJOld
+			oS.alphas[i] = alphaIOld
+			print "change little"
+			return 0
+
+		
+		#update alpha[i]
+		oS.alphas[i] += (alphaJOld - oS.alphas[j]) * oS.trainLabels[i] * oS.trainLabels[j]
+		
+		#update b
+		bi = - Ei - oS.trainLabelsMat[i] * Kii * (oS.alphas[i] - alphasIOld) - oS.trainLabelsMat[j] * Kji * (oS.alphas[j] - alphasJOld) + oS.b
+		bj = - Ej - oS.trainLabelsMat[i] * Kij * (oS.alpahs[i] - alphasIOld) - oS.trainLabelsMat[j] * Kjj * (oS.alphas[j] - alphasJOld) + oS.b
+		
+		if (oS.alphas[i] &gt; 0) and (oS.alphas[i] &lt; oS.C):
+			oS.b = bi
+		elif (oS.alphas[j] &gt; 0) and (oS.alphas[j] &lt; oS.C):
+			oS.b = bj
+		else :
+			oS.b = (bi + bj) / 2
+		
+		#当更新了alpha_i alpha_j 后，对应的误差缓存也需要更新。
+		updateEk(oS,i)
+		updateEk(oS.j)
+		
+		#更新一对				 
+		return 1
+	else:
+		return 0
+	
+		
+	
+
+#函数名称：
+#	SVM_SMO_Complete(dataFeatures,dataLabels,C,toler,maxIter)
+#函数功能：
+#	SMO 实现 SVM 的完整版
+#输入参数：
+#	dataFeatures : 样本特征集合 
+#	dataLabels : 样本标签集合
+#	C :  调和参数 ： float
+#	toler : 容许误差 ： float
+#	maxIter : 最大迭代次数 ： int 
+#返回参数：
+#	alphas , b : 最优回归系数 ，截距 ： arrray or mat , float
+
+def SVM_SMO_Complete(dataFeatures,dataLabels,C=0.6,toler=0.01,maxIter=100):
+	
+	
+	oS = optStruct(mat(dataFeatures),mat(dataLabels),C,toler) 
+	
+	#entireSet : 遍历整个样本集合标志位
+	entireSet = True # 初始阶段要遍历整个集合 
+	
+	
+	#迭代次数
+	iter = 0
+	while(  (iter &lt; maxIter) and ((entireSet) or (alphasChangedPairs &gt; 0)):
+		#更新alpha对数
+		alphasChangedPairs = 0 
+		
+		#
+		if entireSet :
+			#遍历整个样本集
+			for i in range(oS.m):
+				#获取更新的对数
+				alphasChangedPairs += innerLoop(i,oS)
+		
+		else:
+			#遍历分隔边界上的点
+			nonBoundIs = nonzeros( (oS.alphas.T &gt; 0) and (oS.alphas.T &lt; oS.C) )[0]
+			for i in nonBoundIs :
+				alphasChangedPairs += innerLoop(i,oS)
+		
+		
+		if entireSet :
+			entireSet = False
+		
+		elif alphasChanged == 0 :
+			entireSet = True
+		
+		iter += 1
+	
+	return oS.alphas, oS.b
 
 	
 ------------------------------------------------------------------------------	
