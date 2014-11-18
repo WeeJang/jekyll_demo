@@ -22,10 +22,12 @@ title: Machine Learning in Action::SVM_SMO_COMPELET
 
 <h2> SMO 完整版代码实现 </h2>
 
-<h3>完整代码 </h3>
+<h3>[1]优化参数结构 </h3>
 
 <pre>
-# 定义优化参数结构体
+
+定义了一个class，保存相关的参数。也可以直接用一个dict实现。
+
 # 参数列表
 # trainFeaturesMat : 训练特征集合 : mat
 # trainLabelsMat : 训练标签集合 : mat
@@ -50,6 +52,13 @@ class optStruct:
 
 
 
+-------------------------------------------------------------------------------
+</pre>
+
+
+<h3>[2]预测误差计算</h3>
+
+<pre>
 #函数名称:
 #	calcEk(oS,k)
 #函数功能：
@@ -72,9 +81,53 @@ def getEk(oS,k):
 	Ek = fXk - float(oS.trainLabelsMat[k])
 	#更新缓存--无效原因是为了保证当更新alpha对儿时才对对应的eCache进行更新。这个地方其实一直存在疑问。原书也没有给出好的解释。还是哥没理解？FK
 	#反思×2:
+	# 原书是有道理的。只是当更新一对alphas时，才会对其记录进入缓存。
 	return Ek
 
+--------------------------------------------------------------------------------
 
+</pre>
+
+<h3>[3] 更新缓存中的数据</h3>
+<pre>
+
+	每次当一对alphas更新之后，都要更新对应的误差缓存。
+
+
+#函数名称：
+#	updateEk(oS,k)
+#函数功能：
+#	当一对alpha更新后，要更新对应的误差缓存
+#输入参数：
+#	oS : 优化参数结构体 ：optStruct
+#	k : 更新第k个alpha对应的误差缓存
+#返回参数：
+#	void 无
+
+def updataEk(oS,k):
+	
+	#计算预测值
+	fXk = float(multiply(oS.alphas,oS.trainLabesMat).T * (oS.trainFeaturesMat * oS.trainFeaturesMat[k,:])) - oS.b
+	#误差计算
+	Ek = fXk - oS.trainLabelsMat[k]
+	
+	oS.eCache[k] = [1,Ek]
+
+
+----------------------------------------------------------------------------------
+</pre>
+
+
+<h3>[4]第二个alpha参数选择算法实现</h3>
+
+<pre>
+
+	这里运用了启发式算法。
+	进入这个函数的前提是，已经挑选出了第一个alpha。选择的方式是选择能产生最大步长的另一个alpha，使得|Ei - Ej|足够大，
+	这样就能保证有足够明显的下降。这里选取的范围是已经计算过，保存在eCache里面的缓存误差。后面提到的外层函数会涉及。当第一次进入时会对整个样本集都遍历，
+	这次遍历中，缓存中的有效数据是不断增加的。
+	当然，在初始阶段，还是会遇到eCache中数据不足的情况，这时候先随机选取。
+	
 
 #函数名称：
 #	selectSecondAlpha(i,oS,Ei)
@@ -119,24 +172,20 @@ def selectSecondAlpha(i,oS,Ei):
 		Ej = getEk(oS,j)
 	return maxJ,Ej
 
-#函数名称：
-#	updateEk(oS,k)
-#函数功能：
-#	当一对alpha更新后，要更新对应的误差缓存
-#输入参数：
-#	oS : 优化参数结构体 ：optStruct
-#	k : 更新第k个alpha对应的误差缓存
-#返回参数：
-#	void 无
 
-def updataEk(oS,k):
-	
-	#计算预测值
-	fXk = float(multiply(oS.alphas,oS.trainLabesMat).T * (oS.trainFeaturesMat * oS.trainFeaturesMat[k,:])) - oS.b
-	#误差计算
-	Ek = fXk - oS.trainLabelsMat[k]
-	
-	oS.eCache[k] = [1,Ek]
+
+---------------------------------------------------------------------------------
+</pre>
+
+
+<h3>[5]内层循环函数</h3>
+
+<pre>
+
+	内层循环主要是寻找可以更新的alphas对。虽然传入第一个alpha索引，但仅仅是提供一个选项。
+	这个函数内部会先检查第一个给的alpha索引是否可更新，判断的标准是 是否违反kkt 条件。违反了，就说明是可更新的。
+	然后再挑选第二个alpha索引。之后确定剪辑区间，进行优化。如果优化空间较小，则放弃更新。
+	如果更新了之后，还要更新截距b,以及更新<strong>对应的</strong>缓存误差Ei
 
 
 #函数名称：
@@ -147,7 +196,8 @@ def updataEk(oS,k):
 #	i : First Alpha的索引号 ： int
 #	oS : 优化数据结构体 ： optStruct
 #输出参数：
-#	更新alphas 的个数/2 （pairs数）
+#	1 ： 更新了一对alphas
+#	0 :  没有对任何进行更新
 
 def innerLoop(i,oS):
 	
@@ -185,7 +235,7 @@ def innerLoop(i,oS):
 		if eta &lt;= 0 :
 			print "eat &lt;= 0"
 			return 0
-d
+
 		
 		#updata alpha[j] 
 		oS.alphas[j] += oS.trainLabelsMat[j] * (Ei - Ej) / eta
@@ -229,7 +279,21 @@ d
 		return 0
 	
 		
+-------------------------------------------------------------------------------------
+</pre>
 	
+
+
+
+<h3>[6]外层循环函数-主体</h3>
+<pre>
+
+	这个是函数主体，执行外层循环，提供第一个alpha值的索引号。
+	可以看到，当第一次执行函数或者当前的间隔边界（0 &lt; alpha &lt; C)上没有可以优化的值时，循环会切入对整个样本集合的遍历过程中，即令标志位为真。
+	否则，将会对间隔边界上的值进行优化。
+	并且给出最大的迭代次数上限。
+
+
 
 #函数名称：
 #	SVM_SMO_Complete(dataFeatures,dataLabels,C,toler,maxIter)
