@@ -494,10 +494,36 @@ class optStruct:
 
 
 
-
-
+------------------------------------------------------------------------------------------
 </pre>
 
+
+<h3>[9] 优化提示 </h3>
+
+<pre>
+
+	在整个决定分割平面之中，最终起作用的是<strong>支持向量</strong>，即alpha &gt; 0 对应的向量。所以，在对预测集进行判决计算的时候，最好的方式便是只考虑这些向量。	
+	将会极大提高计算速度。	
+	······
+	#挑选支持向量
+	svmIndex = nonzeors(oS.alphas.A &gt; 0)[0]
+	svms = dataMat[svmIndex]
+	labels = dataLabel[svmIndex]
+	
+	m,n = shape(dataPredictMat)
+	······
+	#对预测集合进行预测
+
+	for i in range(m):
+		kernelEval = kernelTrans(svms,dataPredictMat[i,:],('rbf',0.13))
+		predictValue = kernelEval.T * multiply(labels,oS.alphas[svmIndex]) + b
+		
+	······
+
+	
+	
+	
+</pre>
 
 <hr />
 <p> Welcome to contact <a href="mailto:jangwee1@sina.com.cn">me</a>,the friends who like Machine-Learning and Data-Mining.</p>
