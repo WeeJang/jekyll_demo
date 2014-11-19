@@ -426,9 +426,75 @@ def classfySVM(weightsArr,b,predictDataFeaturesArr):
 	核函数处理的技巧在于，将低维空间映射到高维空间，而且不增加计算的复杂度。怎么做到的？
 	映射函数记做 Φ(<i>x</i>) ,它的作用将输入的低维空间（欧式空间）映射到高维空间（希尔伯特空间），比如:输入向量 <i>x</i><sup>T</sup>=(x1,x2),则Φ(<i>x</i>)<sup>T</sup>=(x1<sup>2</sup>,x2<sup>2</sup>,2<sup>0.5</sup>*x1*x2)
 	 这样将二维空间映射到了三维空间。则Kernel Function <strong>K</strong>(<i>x</i>,<i>y</i>) = Φ(<i>x</i>)*Φ(<i>y</i>) = (<i>x</i>+<i>y</i>)<sup>2</sup>
-	因为无论是在优化系数alphas的求解，还是最终的判决上，都会用到计算样本的内积。对于线性不可分的样本，必须将其映射到高维才能运用线性方式进行最优化。从上面的式子中可以看出，核函数相当求映射之后的向量的内积。只要知道了核函数，直接就能在低维空间计算结果，而不必先将其映射到高维，在计算内积。因为映射函数是没必要去找的，我们只要找到核函数就行。只要满足相应的条件就能作为核函数。
+	因为无论是在优化系数alphas的求解，还是最终的判决上，都会用到计算样本的内积。对于线性不可分的样本，必须将其映射到高维才能运用线性方式进行最优化。
+	从上面的式子中可以看出，核函数相当求映射之后的向量的内积。只要知道了核函数，直接就能在低维空间计算结果，而不必先将其映射到高维，在计算内积。
+	因为映射函数是没必要去找的，我们只要找到核函数就行。只要满足相应的条件就能作为核函数。
+
+
+#函数名称：
+#	kernelTrans(X, A, kTup)
+#函数功能：
+#	核函数转换,计算样本集合X与某个样本A之间的径向基距离
+#输入参数：
+#	x :  样本集合 : array(m*n)
+#	A :  单个样本 : array(1*n)
+#	kTup : 核函数类型及参数信息 ： tuple ( type,arg1,arg2...)
+#返回参数：
+#	样本集合与单个样本的高斯径向基距离 m*1
+
+
+
+def kernelTrans(X, A, kTup):
 	
+	m,n = shape(X)
 	
+	K = mat(zeros((m,1)))
+	
+	if kTup[0] == 'line':
+		K = X*A.T
+	elif kTup[0] == 'rbf':
+		
+		for i in range(m):
+			delta = X[i] - A
+			K[i]= delta * delta.T
+			
+		K = exp(-K/(2*kTup[1]**2))
+	else:
+		raise NameError('That Kernel is not recogized')
+	return K
+
+
+
+#同时对optStruct类进行修改
+
+class optStruct:
+	def __init__(self,dataFeaturesArr,dataLabelsArr,C,toler,Ktup):
+		self.dataFeaturesMat = mat(dataFeaturesArr)
+		self.dataLabelsMat = mat(dataLabelsArr)
+		self.C = C
+		self.toler = toler
+		m,n = shape(dataFeaturesArr)
+		self.m = m
+		self.eCache = mat(zeros((self.m,2))		
+		self.aphas = mat(zeros((self.m,1)))
+		self.b = 0.0
+		
+		#K<sub>i,j</sub> 的意义： 第i个样本与第j个样本内积（映射后内积），因此是m*m维的
+		self.K = mat(zeros((m,m)))
+		
+		#每次更新一列
+		for i in range(self.m):
+			self.K[:,i] = kernelTrans(self.dataFeaturesMat,self.dataFeaturesMat[i,:],kTup)
+
+
+
+
+
+# 则利用核函数之后，因为所有的核内积都已经在初始化时确定， 以上其他函数用到内积的计算都替换为oS.K[i,j]即可。
+
+
+
+
 
 </pre>
 
