@@ -1,0 +1,203 @@
+---
+layout: default
+title: VLC分析记录
+---
+
+<h2>{{ page.title }}</h2>
+
+<hr>
+
+<h3>Schedual</h3>
+
+<ol>
+<li>1</li>
+</ol>
+
+<hr>
+
+<h3> Details: </h3>
+
+<h4></h4>
+<pre>
+
+1 JNI(Java Native Interface)
+	本地库接口。
+	VLC的内核引擎主要还是集中于 libvlc,libcore等库构建的。这部分在 /vlc/ 下的
+
+2 android.mk 是关键。探索整个工程的构建，从底层库到java层。
+
+3 对src/org.videolan.vlc.gui.video.VideoPlayerActivity.java的分析看
+
+	mLibVLC ( an instance of LibVLC.class)是控制整个播放的关键。先阶段的思路是从mLibVLC 入手
+
+4 分析 LibVLC.java
+
+     /*
+             * Set higher caching values if using iomx decoding, since some omx
+             * decoders have a very high latency, and if the preroll data isn't
+             * enough to make the decoder output a frame, the playback timing gets
+             * started too soon, and every decoded frame appears to be too late.
+             * On Nexus One, the decoder latency seems to be 25 input packets
+             * for 320x170 H.264, a few packets less on higher resolutions.
+             * On Nexus S, the decoder latency seems to be about 7 packets.
+             */
+
+    latency : 延迟   preroll:  前滚 timing :
+
+
+5 视频基本原理 
+	播放一个视频分为四个步骤：
+	
+	1 access 访问 ：理解为获取，接收，得到
+	2 demux  解复用：就是把通常合在一起的音频和视频分离（还有可能有字幕）
+	3 decode 解码：包括音频视频的解码
+	4 output 输出 ：包括音频(aout)和视频(vout)的输出
+
+	ES PES TS
+
+6 流媒体跟踪
+
+	1. 'libvlc_new' : libvlc_instance_t * libvlc_new( int argc, const char *const *argv ) [in /vlc/lib/core.c]
+
+7 vlc 代码分析（not for android）
+  
+7.1  Libvlc 是vlc的核心，它是一个提供接口的库，比如给vlc 提供某些功能接口：流的接入，音频和视频输出，插件管理，线程系统。所有的LibVlc源码位于vlc/src/及其子目录：
+	interface/:包含与用户交互的代码，如按键和设备弹出。
+		-----dialog.c  interface.c
+        playlist/: 管理播放列表的交互，如停止，播放，下一个，或者随机播放。
+                          ××××   msg_Dbg( obj, "corks count: %"PRId64" -> %"PRId64, old.i_int, cur.i_int );  ---打印调试
+		-----aout.c  art.c  art.h  control.c  engine.c  fetcher.c  fetcher.h  item.c  loadsave.c  playlist_internal.h  preparser.c  preparser.h  search.c  services_discovery.c  sort.c  thread.c  tree.c
+	input/:代开一个输入组件，读包，解析她们并且将被还原的基本流传递给解码器
+		----access.c  clock.h    decoder.h          demux.h   es_out_timeshift.c  event.h  input_interface.h  item.h      resource.h  stream_demux.c   stream_memory.c  vlm.c        vlm_internal.h
+		    access.h  control.c  decoder_synchro.c  es_out.c  es_out_timeshift.h  info.h   input_internal.h   meta.c      stats.c     stream_filter.c  subtitles.c      vlm_event.c  vlmshell.c
+		    clock.c   decoder.c  demux.c            es_out.h  event.c             input.c  item.c             resource.c  stream.c    stream.h         var.c            vlm_event.h
+	video_output/：初始化video显示器，从解码器得到所有的图片和子图片（如subtitle),随意将她们转换为其他格式（如：YUV到RGB)并且播放
+		----chrono.h   control.h  display.h  inhibit.c  interlacing.c  opengl.c    snapshot.h   video_epg.c     video_text.c     vout_control.h   vout_intf.c         vout_wrapper.c
+		    control.c  display.c  event.h    inhibit.h  interlacing.h  snapshot.c  statistic.h  video_output.c  video_widgets.c  vout_internal.h  vout_subpictures.c  window.c
+	audio_output/: 初始化音频mixer(混合器）。如发现正确的播放频率，然后重新制作从解码器接受过来的音频。
+		----aout_internal.h  common.c  dec.c  filters.c  output.c  volume.c
+	stream_output/: 类似audio_output
+		---sap.c  sdp.c  stream_output.c  stream_output.h
+	misc/:被libvlc其他部分使用的杂项，如线程系统，消息队列，cpu探测，对象查询系统，或者特定平台代码
+		---addons.c  epg.c        events.c  filter_chain.c   http_auth.c    md5.c       mtime.c    picture_fifo.c  rand.c        text_style.c  update_crypto.c  variables.h
+			block.c   error.c      exit.c    fingerprinter.c  httpcookies.c  messages.c  objects.c  picture_pool.c  subpicture.c  threads.c     update.h         xml.c
+			cpu.c     es_format.c  filter.c  fourcc.c         image.c        mime.c      picture.c  probe.c         subpicture.h  update.c      variables.c
+
+7.2 vlc基本是围绕着libVLC写成的程序。
+
+7.3 组件。组件基本位于 module\子目录，在运行时被加载，每个组件提供不同的特性适应特定的文件环境。另外大量的不断编写的可移植功能位于 auto_output\ video_output\ interface\等，支持不同平台
+
+------------------------------------------------------------------------------------------------------------------------------------------
+</pre>
+
+
+<h4>追踪状态似乎有眉目了</h4>
+<pre>
+	感谢<a href='http://blog.csdn.net/vertx/article/details/8647790'>不甘心的阿甘</a>带我走出了死胡同。
+	
+	手动追踪一下代码
+	
+	<strong>Java-Level :</strong>
+		org.videolan.vlc.LibVLC.java :
+			[line 649]   
+			/**
+     			* Returns true if any media is playing
+     			*/
+    			public native boolean isPlaying();
+		
+	<strong>JNI : </strong>
+		libvlcjni.c :
+			[line 478]
+			jboolean Java_org_videolan_libvlc_LibVLC_isPlaying(JNIEnv *env, jobject thiz)
+			{
+    				libvlc_media_player_t *mp = getMediaPlayer(env, thiz);
+    				if (mp)
+        			return !!libvlc_media_player_is_playing(mp);
+    				else
+        			return 0;
+			}
+	<strong>Native-Level:</strong>
+		vlc/lib/media_player.c :
+			  930	/**************************************************************************
+			  931	 * Tells whether the media player is currently playing.
+			  932	 *
+			  933	 * Enter with lock held.
+ 			  934	 **************************************************************************/
+			  935	int libvlc_media_player_is_playing( libvlc_media_player_t *p_mi )
+			  936	{
+  			  937	    libvlc_state_t state = libvlc_media_player_get_state( p_mi );
+			  938	    return (libvlc_Playing == state) || (libvlc_Buffering == state);
+			  939	}
+  			  940
+         
+                vlc/lib/media_player.h :
+			  		
+			/**
+			 * Note the order of libvlc_state_t enum must match exactly the order of
+			 * \see mediacontrol_PlayerStatus, \see input_state_e enums,
+			 * and VideoLAN.LibVLC.State (at bindings/cil/src/media.cs).
+			 *
+			 * Expected states by web plugins are:
+			 * IDLE/CLOSE=0, OPENING=1, BUFFERING=2, PLAYING=3, PAUSED=4,
+			 * STOPPING=5, ENDED=6, ERROR=7
+			 */
+			typedef enum libvlc_state_t
+			{
+			    libvlc_NothingSpecial=0,
+			    libvlc_Opening,
+			    libvlc_Buffering,
+			    libvlc_Playing,
+			    libvlc_Paused,
+			    libvlc_Stopped,
+			    libvlc_Ended,
+			    libvlc_Error
+			} libvlc_state_t;
+
+
+
+我们可以自己去定义一些状态函数，然后进行监听，具体可以参考 上面那个链接的前辈的思路
+
+-------------------------------------------------------------------------------------------
+
+
+
+		
+
+
+
+
+</pre>
+
+<h4>key words</h4>
+<pre>
+
+1MPEG-TS流
+
+
+2 源码中涉及到一些C技巧。
+	2.1宏 结构体 实现继承
+	2.2
+	static int RandomCallback( vlc_object_t *p_this, char const *psz_cmd,
+                           vlc_value_t oldval, vlc_value_t newval, void *a )
+	{
+    		(void)psz_cmd; (void)oldval; (void)newval; (void)a;
+
+
+	这一句有什么作用呢？
+	请教之后，因为这三个变量在这个函数中都没有用到，所以当编译器警告级别开到最大的时候，会输出编译警告，告诉你这些变量可能没被引用。
+	所以所，这样的话，就相当告诉编译器我用过了。
+	我猜测，接口这样设计，可能是为了将来扩展好用。
+
+        	
+
+
+</pre>
+
+<hr />
+
+<p> Welcome to contact <a href="mailto:jangwee1@sina.com.cn">me</a>,the friends who like Machine-Learning and Data-Mining.</p>
+<p> <a href=freedom.png>:)</a></p>
+
+<p>{{ page.date | date_to_string }}</p>
+
+
