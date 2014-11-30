@@ -130,8 +130,7 @@ title: VLC分析记录
 			  939	}
   			  940
          
-                vlc/lib/media_player.h :
-			  		
+		vlc/include/vlc/libvlc_media.h			  		
 			/**
 			 * Note the order of libvlc_state_t enum must match exactly the order of
 			 * \see mediacontrol_PlayerStatus, \see input_state_e enums,
@@ -157,16 +156,94 @@ title: VLC分析记录
 
 我们可以自己去定义一些状态函数，然后进行监听，具体可以参考 上面那个链接的前辈的思路
 
+
 -------------------------------------------------------------------------------------------
 
+</pre>
+
+<h4>继续追踪源代码</h4>
 
 
-		
+<pre>
+
+android/vlc/lib/media_player.c :
+	[line 893]:	void libvlc_media_player_set_pause( libvlc_media_player_t *p_mi, int paused )
+			{
+	………………
+	[line 899]:		    libvlc_state_t state = libvlc_media_player_get_state( p_mi );
+	
+	
+所有跟媒体有关的，比如 长度，播放时间，都跟 p_input_thread (input_thread_t* 类型)
+
+
+
+
+android/vlc/lib/media.c :
+
+/**************************************************************************
+ * Getter for statistics information
+ **************************************************************************/
+int libvlc_media_get_stats( libvlc_media_t *p_md,
+                            libvlc_media_stats_t *p_stats )
+{
+    if( !p_md->p_input_item )
+        return false;
+
+    input_stats_t *p_itm_stats = p_md->p_input_item->p_stats;
+    vlc_mutex_lock( &p_itm_stats->lock );
+    p_stats->i_read_bytes = p_itm_stats->i_read_bytes;
+    p_stats->f_input_bitrate = p_itm_stats->f_input_bitrate;
+
+    p_stats->i_demux_read_bytes = p_itm_stats->i_demux_read_bytes;
+    p_stats->f_demux_bitrate = p_itm_stats->f_demux_bitrate;
+    p_stats->i_demux_corrupted = p_itm_stats->i_demux_corrupted;
+    p_stats->i_demux_discontinuity = p_itm_stats->i_demux_discontinuity;
+
+    p_stats->i_decoded_video = p_itm_stats->i_decoded_video;
+    p_stats->i_decoded_audio = p_itm_stats->i_decoded_audio;
+
+    p_stats->i_displayed_pictures = p_itm_stats->i_displayed_pictures;
+    p_stats->i_lost_pictures = p_itm_stats->i_lost_pictures;
+
+    p_stats->i_played_abuffers = p_itm_stats->i_played_abuffers;
+    p_stats->i_lost_abuffers = p_itm_stats->i_lost_abuffers;
+
+    p_stats->i_sent_packets = p_itm_stats->i_sent_packets;
+    p_stats->i_sent_bytes = p_itm_stats->i_sent_bytes;
+    p_stats->f_send_bitrate = p_itm_stats->f_send_bitrate;
+    vlc_mutex_unlock( &p_itm_stats->lock );
+    return true;
+}
+
+<strong>看来许多重要的API集中于 vlc/lib/</strong>
+
+
+
+
+
+
+
 
 
 
 
 </pre>
+
+
+<h3>方案</h3>
+<pre>
+	1 vlc 播放 android平台demo (js 备选)
+	2 前期自己部署服务器，去get  后期 可以利用VParse 去解析地址，然后http get
+	3 参数采集：
+		3.1 寻找工具，
+		3.2 抓包，分析 时延，
+			eg ping -c
+
+			网速测试 android::TrafficStats 类
+	4 在url的消息触发之后，hook住它，Vparse 地址，然后调用本地程序。
+ 
+</pre>
+
 
 <h4>key words</h4>
 <pre>
