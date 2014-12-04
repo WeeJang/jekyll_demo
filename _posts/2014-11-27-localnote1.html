@@ -213,14 +213,95 @@ int libvlc_media_get_stats( libvlc_media_t *p_md,
     p_stats->f_send_bitrate = p_itm_stats->f_send_bitrate;
     vlc_mutex_unlock( &p_itm_stats->lock );
     return true;
-}
+}i
+
 
 <strong>看来许多重要的API集中于 vlc/lib/</strong>
 
 
+------------------------------------
+
+记录一条跟踪：
+
+这次在机器上尝试着打开德国DASH服务器上的视频，卡顿了，看了一下log 大概如下
 
 
 
+追踪了一下源码：
+jangwee@jangwee-OptiPlex-3020:~/workspace/wp_android$ grep "picture is too late to be displayed" * -r
+匹配到二进制文件 android/vlc-android/obj/local/armeabi-v7a/libvlcjni.so
+匹配到二进制文件 android/vlc-android/libs/armeabi-v7a/libvlcjni.so
+匹配到二进制文件 android/vlc/build-android-arm-linux-androideabi/src/video_output/video_output.o
+匹配到二进制文件 android/vlc/build-android-arm-linux-androideabi/src/.libs/libvlccore.a
+android/vlc/src/video_output/video_output.c:                        msg_Warn(vout, "picture is too late to be displayed (missing %"PRId64" ms)", late/1000);
+
+在video_output.c文件里。
+
+   815	static int ThreadDisplayPreparePicture(vout_thread_t *vout, bool reuse, bool frame_by_frame)
+   816	{
+   817	    bool is_late_dropped = vout->p->is_late_dropped && !vout->p->pause.is_on && !frame_by_frame;
+   818	
+   819	    vlc_mutex_lock(&vout->p->filter.lock);
+   820	
+   821	    picture_t *picture = filter_chain_VideoFilter(vout->p->filter.chain_static, NULL);
+   822	    assert(!reuse || !picture);
+   823	
+   824	    while (!picture) {
+   825	        picture_t *decoded;
+   826	        if (reuse && vout->p->displayed.decoded) {
+   827	            decoded = picture_Hold(vout->p->displayed.decoded);
+   828	        } else {
+   829	            decoded = picture_fifo_Pop(vout->p->decoder_fifo);
+   830	            if (decoded) {
+   831	                if (is_late_dropped && !decoded->b_force) {
+   832	                    const mtime_t predicted = mdate() + 0; /* TODO improve */
+   833	                    const mtime_t late = predicted - decoded->date;
+   834	                    if (late > VOUT_DISPLAY_LATE_THRESHOLD) {
+   835	                        msg_Warn(vout, "picture is too late to be displayed (missing %"PRId64" ms)", late/1000);
+   836	                        picture_Release(decoded);
+   837	                        vout_statistic_AddLost(&vout->p->statistic, 1);
+   838	                        continue;
+   839	                    } else if (late > 0) {
+   840	                        msg_Dbg(vout, "picture might be displayed late (missing %"PRId64" ms)", late/1000);
+   841	                    }
+   842	                }
+   843	                if (!VideoFormatIsCropArEqual(&decoded->format, &vout->p->filter.format))
+   844	                    ThreadChangeFilters(vout, &decoded->format, vout->p->filter.configuration, true);
+   845	            }
+   846	        }
+   847	
+   848	        if (!decoded)
+   849	            break;
+   850	        reuse = false;
+   851	
+   852	        if (vout->p->displayed.decoded)
+   853	            picture_Release(vout->p->displayed.decoded);
+   854	
+   855	        vout->p->displayed.decoded       = picture_Hold(decoded);
+   856	        vout->p->displayed.timestamp     = decoded->date;
+   857	        vout->p->displayed.is_interlaced = !decoded->b_progressive;
+   858	
+   859	        picture = filter_chain_VideoFilter(vout->p->filter.chain_static, decoded);
+   860	    }
+   861	
+   862	    vlc_mutex_unlock(&vout->p->filter.lock);
+   863	
+   864	    if (!picture)
+   865	        return VLC_EGENERIC;
+   866	
+   867	    assert(!vout->p->displayed.next);
+   868	    if (!vout->p->displayed.current)
+   869	        vout->p->displayed.current = picture;
+   870	    else
+   871	        vout->p->displayed.next    = picture;
+   872	    return VLC_SUCCESS;
+   873	}
+   874	
+
+--------------------------------------------------------------------------------------------
+
+
+同时，追踪了一下 <strong>core input: Buffering 30%</strong>
 
 
 
