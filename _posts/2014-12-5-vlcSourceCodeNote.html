@@ -1,6 +1,6 @@
 ---
 layouts: default
-titile: VLC_SourceCode_Note
+title: VLC_SourceCode_Note
 ---
 
 <h2> { page.title }</h2>
@@ -105,7 +105,28 @@ typedef union
 	    return 0;
 	}
 
-(4) 
+(4)
+/**
+ * Main structure representing an input thread. This structure is mostly
+ * private. The only public fields are READ-ONLY. You must use the helpers
+ * to modify them
+ */
+struct input_thread_t
+{
+    VLC_COMMON_MEMBERS
+
+    bool b_error;
+    bool b_eof;
+    bool b_preparsing;
+    bool b_dead;
+
+    /* All other data is input_thread is PRIVATE. You can't access it
+     * outside of src/input */
+    input_thread_private_t *p;
+};
+
+
+ 
 </pre>
 
 
