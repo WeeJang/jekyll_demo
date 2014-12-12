@@ -105,7 +105,7 @@ typedef union
 	    return 0;
 	}
 
-(4)
+(4) input_thread_t : 
 /**
  * Main structure representing an input thread. This structure is mostly
  * private. The only public fields are READ-ONLY. You must use the helpers
@@ -125,6 +125,250 @@ struct input_thread_t
     input_thread_private_t *p;
 };
 
+--> input_thread_private_t *p:
+/** Private input fields */
+struct input_thread_private_t
+{
+    /* Global properties */
+    double      f_fps;
+    int         i_state;
+    bool        b_can_pause;
+    bool        b_can_rate_control;
+    bool        b_can_pace_control;
+
+    /* Current state */
+    bool        b_recording;
+    int         i_rate;
+
+    /* Playtime configuration and state */
+    int64_t     i_start;    /* :start-time,0 by default */
+    int64_t     i_stop;     /* :stop-time, 0 if none */
+    int64_t     i_run;      /* :run-time, 0 if none */
+    int64_t     i_time;     /* Current time */
+    bool        b_fast_seek;/* :input-fast-seek */
+
+    /* Output */
+    bool            b_out_pace_control; /* XXX Move it ot es_sout ? */
+    sout_instance_t *p_sout;            /* Idem ? */
+    es_out_t        *p_es_out;
+    es_out_t        *p_es_out_display;
+
+    /* Title infos FIXME multi-input (not easy) ? */
+    int          i_title;
+    input_title_t **title;
+
+    int i_title_offset;
+    int i_seekpoint_offset;
+
+    /* User bookmarks FIXME won't be easy with multiples input */
+    seekpoint_t bookmark;
+    int         i_bookmark;
+    seekpoint_t **pp_bookmark;
+
+    /* Input attachment */
+    int i_attachment;
+    input_attachment_t **attachment;
+    demux_t **attachment_demux;
+
+    /* Main input properties */
+
+    /* Input item */
+    input_item_t   *p_item;
+
+    /* Main source */
+    input_source_t input;
+    /* Slave sources (subs, and others) */
+    int            i_slave;
+    input_source_t **slave;
+
+    /* Resources */
+    input_resource_t *p_resource;
+    input_resource_t *p_resource_private;
+
+    /* Stats counters */
+    struct {
+        counter_t *p_read_packets;
+        counter_t *p_read_bytes;
+        counter_t *p_input_bitrate;
+        counter_t *p_demux_read;
+        counter_t *p_demux_bitrate;
+        counter_t *p_demux_corrupted;
+        counter_t *p_demux_discontinuity;
+        counter_t *p_decoded_audio;
+        counter_t *p_decoded_video;
+        counter_t *p_decoded_sub;
+        counter_t *p_sout_sent_packets;
+        counter_t *p_sout_sent_bytes;
+        counter_t *p_sout_send_bitrate;
+        counter_t *p_played_abuffers;
+        counter_t *p_lost_abuffers;
+        counter_t *p_displayed_pictures;
+        counter_t *p_lost_pictures;
+        vlc_mutex_t counters_lock;
+    } counters;
+
+    /* Buffer of pending actions */
+    vlc_mutex_t lock_control;
+    vlc_cond_t  wait_control;
+    int i_control;
+    input_control_t control[INPUT_CONTROL_FIFO_SIZE];
+
+    bool b_abort;
+    bool is_running;
+    vlc_thread_t thread;
+};
+	
+-------> sout_instance_t
+
+/** Stream output instance (FIXME: should be private to src/ to avoid
+* invalid unsynchronized access) */
+struct sout_instance_t
+{
+    VLC_COMMON_MEMBERS
+
+    char *psz_sout;
+
+    /** count of output that can't control the space */
+    int                 i_out_pace_nocontrol;
+
+    vlc_mutex_t         lock;
+    sout_stream_t       *p_stream;
+};
+
+
+----------------------------------------> vlc_mutex_t 互斥对象
+
+typedef struct vlc_thread *vlc_thread_t;
+typedef struct
+{
+    bool dynamic;
+    union
+    {
+        struct
+        {
+            bool locked;
+            unsigned long contention;
+        };
+        CRITICAL_SECTION mutex;
+    };
+} vlc_mutex_t;
+
+
+
+
+---------------------------------------> sout_stream_t
+
+/** Stream output instance (FIXME: should be private to src/ to avoid
+ * invalid unsynchronized access) */
+struct sout_instance_t
+{
+    VLC_COMMON_MEMBERS
+
+    char *psz_sout;
+
+    /** count of output that can't control the space */
+    int                 i_out_pace_nocontrol;
+
+    vlc_mutex_t         lock;
+    sout_stream_t       *p_stream;
+};
+
+-------------> es_out_t 
+一系列函数指针
+struct es_out_t
+{
+    es_out_id_t *(*pf_add)    ( es_out_t *, const es_format_t * );
+    int          (*pf_send)   ( es_out_t *, es_out_id_t *, block_t * );
+    void         (*pf_del)    ( es_out_t *, es_out_id_t * );
+    int          (*pf_control)( es_out_t *, int i_query, va_list );
+    void         (*pf_destroy)( es_out_t * );
+
+    es_out_sys_t    *p_sys;
+};
+
+------------>input_item_t
+
+struct input_item_t
+{
+    int        i_id;                 /**< Identifier of the item */
+
+    char       *psz_name;            /**< text describing this item */
+    char       *psz_uri;             /**< mrl of this item */
+
+    int        i_options;            /**< Number of input options */
+    char       **ppsz_options;       /**< Array of input options */
+    uint8_t    *optflagv;            /**< Some flags of input options */
+    unsigned   optflagc;
+
+    mtime_t    i_duration;           /**< Duration in microseconds */
+
+
+    int        i_categories;         /**< Number of info categories */
+    info_category_t **pp_categories; /**< Pointer to the first info category */
+
+    int         i_es;                /**< Number of es format descriptions */
+    es_format_t **es;                /**< Es formats */
+
+    input_stats_t *p_stats;          /**< Statistics */
+
+    vlc_meta_t *p_meta;
+
+    int         i_epg;               /**< Number of EPG entries */
+    vlc_epg_t   **pp_epg;            /**< EPG entries */
+
+    vlc_event_manager_t event_manager;
+
+    vlc_mutex_t lock;                 /**< Lock for the item */
+
+    uint8_t     i_type;              /**< Type (file, disc, ... see input_item_type_e) */
+    bool        b_error_when_reading;/**< Error When Reading */
+};
+
+------------->input_source_t
+
+/* input_source_t: gathers all information per input source */
+typedef struct
+{
+    demux_t  *p_demux; /**< Demux plugin instance */
+
+    /* Title infos for that input */
+    bool         b_title_demux; /* Titles/Seekpoints provided by demux */
+    int          i_title;
+    input_title_t **title;
+
+    int i_title_offset;
+    int i_seekpoint_offset;
+
+    int i_title_start;
+    int i_title_end;
+    int i_seekpoint_start;
+    int i_seekpoint_end;
+
+    /* Properties */
+    bool b_can_pause;
+    bool b_can_pace_control;
+    bool b_can_rate_control;
+    bool b_can_stream_record;
+    bool b_rescale_ts;
+
+    /* */
+    int64_t i_pts_delay;
+
+    bool       b_eof;   /* eof of demuxer */
+
+} input_source_t;
+
+
+------------->counter_t
+
+typedef struct counter_t
+{
+    int                 i_compute_type;
+    int                 i_samples;
+    counter_sample_t ** pp_samples;
+
+    mtime_t             last_update;
+} counter_t;
 
  
 </pre>
