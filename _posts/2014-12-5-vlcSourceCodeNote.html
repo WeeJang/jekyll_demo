@@ -1,0 +1,52 @@
+---
+layouts: default
+titile: VLC_SourceCode_Note
+---
+
+<h2> { page.title }</h2>
+
+<hr/>
+
+<h3>数据结构<h3>
+<pre>
+
+(1) 宏定义的超级父类-VLC_COMMON_MEMBERS:
+
+/*****************************************************************************
+ * Common structure members
+ *****************************************************************************/
+
+/* VLC_COMMON_MEMBERS : members common to all basic vlc objects */
+#define VLC_COMMON_MEMBERS                                                  \
+/** \name VLC_COMMON_MEMBERS                                                \
+ * these members are common for all vlc objects                             \
+ */                                                                         \
+/**@{*/                                                                     \
+    const char *psz_object_type;                                            \
+                                                                            \
+    /* Messages header */                                                   \
+    char *psz_header;                                                       \
+    int  i_flags;                                                           \
+                                                                            \
+    /* Object properties */                                                 \
+    bool b_force;      /**< set by the outside (eg. module_need()) */ \
+                                                                            \
+    /* Stuff related to the libvlc structure */                             \
+    libvlc_int_t *p_libvlc;                  /**< (root of all evil) - 1 */ \
+                                                                            \
+    vlc_object_t *  p_parent;                            /**< our parent */ \
+                                                                            \
+/**@}*/                            
+
+(2) vlc_object_t : 主要的一个数据结构
+
+/** The main vlc_object_t structure */
+struct vlc_object_t
+{
+    VLC_COMMON_MEMBERS
+};
+
+</pre>
+
+
+
