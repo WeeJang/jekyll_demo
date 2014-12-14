@@ -304,11 +304,56 @@ android/vlc/src/video_output/video_output.c:                        msg_Warn(vou
 同时，追踪了一下 <strong>core input: Buffering 30%</strong>
 
 
+</pre>
+
+<h4>JNI 部分</h4>
+
+<pre>
+
+------------------------------------libvlc-track.c
+[line 268] jobject Java_org_videolan_libvlc_LibVLC_getStats(JNIEnv *env, jobject thiz):
+	似乎是得到的统计信息,返回一个hash表
+
+
+</pre>
+
+
+<h4>Java层可以改动部分</h4>
+
+<pre>
+	VideoPlayerActivity.java :
+[line 945] :
+ /**
+     *  Handle libvlc asynchronous events
+ */
+
+感觉可以从这里入手.
+这个地方是处理事件的入口，那么从哪抛出的事件呢？
+
+在libvlcjni.c ：
+[line 122] static void vlc_event_callback(const libvlc_event_t *ev, void *data) 
+
+[line 400] Java_org_videolan_libvlc_LibVLC_playMRL 调用上面的本地方法
+
+注意
+在EventHandler.java :
+[line 122]    
+ /** This method is called by a native thread **/
+    public void callback(int event, Bundle b) {
+
+说明 JNI 回调了Java层的方法，post 消息
+
+在jni/下检索 : 
+
+jangwee@jangwee-OptiPlex-3020:~/workspace/wp_android/android/vlc-android/jni$ grep '"callback"' -n -r *
+libvlcjni.c:197:    jmethodID methodID = (*env)->GetMethodID(env, cls, "callback", "(ILandroid/os/Bundle;)V");
+libvlcjni-util.c:142:    jmethodID methodID = (*env)->GetMethodID(env, cls, "callback", "(ILandroid/os/Bundle;)V");
 
 
 
 
 </pre>
+
 
 
 <h3>方案</h3>
