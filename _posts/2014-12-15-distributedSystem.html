@@ -1,0 +1,118 @@
+---
+layout: default
+title: DistributedSystem
+---
+
+<hr/>
+
+
+<h2>分布式系统- ChatRoom</h2>
+
+<pre>
+	
+	最近要帮一个同学做一个分布式的聊天室。做一下记录。
+
+----
+功能要求：
+	1 用户可以创建一个聊天组。
+	2 用户可以加入一个存在的聊天组
+	3 用户可以离开一个聊天组（优雅或者不优雅）
+	4 用户可以以分布式的方式选举一个组领导者
+	5 实现两种不同的分布式同步方式：
+			Total order and Casual order of Messages
+----
+
+技术要求：
+	1 Java 实现，使用分布式系统技术。
+	2 消息交流基于组播（IP:255.255.255.255 端口自定，但要防止冲突）
+----
+
+测试要求：
+	1 四台电脑，测试两个组
+	2 断开lead的网络，让组重新发起选举，测试选举算法的有效性。
+	3 制造严重丢包（大于75%）并且在同一时间发送多个消息，验证同步order算法的有效性,能够在展示给用户之前，正确的排序。
+
+
+----
+解决方案：
+	1 UI Create Join Leave Election Ordering
+	2 Election : Bully algorithm
+	3 Ordering :
+			total ordering : 组长分发sequence number,给每一个消息。
+			causul ordering : vector_clcok.The causal ordering is probably easiest to solve using a vector clock with sequence
+						numbers for each participant 
+	4 只有实际的聊天消息需要观察排序
+	5 聊天消息通过UDP组播发送。使用TCP向组长请求sequence number
+	6 可以选择有确认回复或者没有确认回复
+	7 用户名可以自己生成。但必须是唯一的。
+	8 消息的序列化可以自己生成。
+
+----
+注意事项：
+	1 TCP 服务端多线程，避免堵塞。
+	2 设置心跳，保持与leader 的响应 keep_alive
+	3 同一个广播组使用相同的IP + port ,使能本地回环。
+	 
+----
+
+
+-----------------------------
+|
+|	实现细节
+|
+-----------------------------
+-----
+协议常量：
+	final string SPLIT_FLAG = "@#@#@#"
+	 
+
+
+
+
+
+----
+
+
+-----
+ACK 机制。
+	1 对于发送的UDP数据消息（即聊天信息）。
+		发送者从UI获取输入框信息，组装聊天信息msg,包含  [chat_flag，lamport_timestamp/vector_cloct,消息内容] 并在本地缓存信息副本[ts/vc+消息内容]，以重传。
+			消息副本数据结构 hashmap<ts/vc自己的，消息内容>
+		接收者收到消息之后，加入自己的局部消息队列，根据时间戳排队。广播回复确认收到信息[ack_chat_flag,ts/vc发送方]. 
+		发送者接收到的信息，登记收到用户。所有用户都收到，则把缓冲副本删掉，表示广播成功。如果一段时间之后（2秒）没有收到，发送方重传。
+		重传消息： retran_chat_flag + 本地缓存消息副本（ts/vc+消息内容）。
+		发送者收到消息，根据ts/vc对比，如果自己的接受队列表中，含有这个消息。则丢弃。如果没有，加入自己的局部消息队列，广播。
+	        …………
+	2 对于发送的选举消息，
+
+
+
+-----
+1 election algorithm--By Bully算法
+	1 每个创建组的用户默认是改组的leader.然后为每一个new joiner 随机一个 participantId.当某个链接断开时，需要利用这个participantId进行选举。
+	2 每次新选举出的leader必须重新给每个接入用户随机一个新的 participantId,为下一次重新选举。
+	3 为保证事务性，每一次重新发起起选举时，清空局部消息队列。
+
+2 total ordering:---By Lamport算法
+	 
+	1 每个进程，都有一个自己的局部时钟。如果客户端是自己create group 则自己初始化时钟，然后把自己置为leader。
+					    如果是join group需要向组内广播，询问谁是leader.leader会把把消息[leader的IP+port+使用的ordering方法]广播出去。然后，新加入的成员根据消息建立TCP链接。并根据广播中的时间戳更新
+					    初始化时钟。
+	2 通过lamport算法，校正时钟。每一次广播的UDP包里都有时间戳。
+		lamport算法：[Pi-第i个进程，Ci-第i个进程的时间戳]
+			.1 Pi在执行一个事件之前，Pi执行 ++ Ci
+			.2 pi在发送消息m给Pj时，消息中的时间戳ts(m) = Ci
+			.3 Pj接受到消息m之后，Cj = max{ts(m),Cj}
+	3 全序多播流程：
+		.1 发送进程多播发送消息m时，给m带上时间戳。
+		.2 当进程接受到消息m后，将其放入自己的局部消息队列，按照时间戳排序。
+		.3 接受进程向所有进程多播发送应答。
+		.4 当消息被所有进程应答，且排在队列q首位，方可处理。正式递交，显示。
+	4 局部消息队列的设计。
+		数据结构 LinkList<>
+
+
+
+	
+
+</pre>

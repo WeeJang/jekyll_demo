@@ -349,8 +349,26 @@ jangwee@jangwee-OptiPlex-3020:~/workspace/wp_android/android/vlc-android/jni$ gr
 libvlcjni.c:197:    jmethodID methodID = (*env)->GetMethodID(env, cls, "callback", "(ILandroid/os/Bundle;)V");
 libvlcjni-util.c:142:    jmethodID methodID = (*env)->GetMethodID(env, cls, "callback", "(ILandroid/os/Bundle;)V");
 
+先回溯libvlcjni.c 197: 位于函数：
+static void vlc_event_callback(const libvlc_event_t *ev, void *data) 
+是一个本地函数
+
+调用这个函数的是 ：
+void Java_org_videolan_libvlc_LibVLC_playMRL(JNIEnv *env, jobject thiz, jlong instance,
+                                             jstring mrl, jobjectArray mediaOptions)
+
+通过名字可以看到，调用他的是
+org.videolan.libvlc.LibVLC.java中的playMRL:    private native void playMRL(long instance, String mrl, String[] mediaOptions);
+
+这下一切都明朗了
+
+注意758行的    public native Map<String, Object> getStats();
+log 一下！
 
 
+
+现在的思路是在认为暂停之后，调用getStats();
+	1986
 
 </pre>
 
