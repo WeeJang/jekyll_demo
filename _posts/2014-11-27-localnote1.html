@@ -303,6 +303,100 @@ android/vlc/src/video_output/video_output.c:                        msg_Warn(vou
 
 同时，追踪了一下 <strong>core input: Buffering 30%</strong>
 
+在 vlc/src/input/es_out.c 
+
+
+   597	static void EsOutDecodersStopBuffering( es_out_t *out, bool b_forced )
+   598	{
+   599	    es_out_sys_t *p_sys = out->p_sys;
+   600	    int i_ret;
+   601	
+   602	    mtime_t i_stream_start;
+   603	    mtime_t i_system_start;
+   604	    mtime_t i_stream_duration;
+   605	    mtime_t i_system_duration;
+   606	    if (input_clock_GetState( p_sys->p_pgrm->p_clock,
+   607	                                  &i_stream_start, &i_system_start,
+   608	                                  &i_stream_duration, &i_system_duration ))
+   609	        return;
+   610	
+   611	    mtime_t i_preroll_duration = 0;
+   612	    if( p_sys->i_preroll_end >= 0 )
+   613	        i_preroll_duration = __MAX( p_sys->i_preroll_end - i_stream_start, 0 );
+   614	
+   615	    const mtime_t i_buffering_duration = p_sys->i_pts_delay +
+   616	                                         i_preroll_duration +
+   617	                                         p_sys->i_buffering_extra_stream - p_sys->i_buffering_extra_initial;
+   618	
+   619	    if( i_stream_duration <= i_buffering_duration && !b_forced )
+   620	    {
+   621	        double f_level;
+   622	        if (i_buffering_duration == 0)
+   623	            f_level = 0;
+   624	        else
+   625	            f_level = __MAX( (double)i_stream_duration / i_buffering_duration, 0 );
+   626	        input_SendEventCache( p_sys->p_input, f_level );
+   627	
+   628	        msg_Dbg( p_sys->p_input, "Buffering %d%%", (int)(100 * f_level) );
+   629	        return;
+   630	    }
+   631	    input_SendEventCache( p_sys->p_input, 1.0 );
+   632	
+   633	    msg_Dbg( p_sys->p_input, "Stream buffering done (%d ms in %d ms)",
+   634	              (int)(i_stream_duration/1000), (int)(i_system_duration/1000) );
+   635	    p_sys->b_buffering = false;
+   636	    p_sys->i_preroll_end = -1;
+
+QoE的 Key Point 在这里！
+
+[619] 行 ：    if( i_stream_duration <= i_buffering_duration && !b_forced ) 
+	是一个判断，i_stream_duration就是当前未解析缓存，i_buffering_duration 是一个设定的阈值。注意 i_system_duration 也应该是一个buffering.系统的？不明确。
+
+	先参考一下他的这个消息记录方式：
+	step 1 call :input_clock_GetState()
+	step 2 call : msg_Dbg()
+
+下面就了解一下各个函数的功能：
+	input_clock_GetState:
+	This function returns current clock state or VLC_EGENERIC if there is not a reference point.
+  469 int input_clock_GetState( input_clock_t *cl,
+  470                           mtime_t *pi_stream_start, mtime_t *pi_system_start,
+  471                           mtime_t *pi_stream_duration, mtime_t *pi_system_duration )
+  472 {
+  473     vlc_mutex_lock( &cl->lock );
+  474 
+  475     if( !cl->b_has_reference )
+  476     {
+  477         vlc_mutex_unlock( &cl->lock );
+  478         return VLC_EGENERIC;
+  479     }
+  480 
+  481     *pi_stream_start = cl->ref.i_stream;
+  482     *pi_system_start = cl->ref.i_system;
+  483 
+  484     *pi_stream_duration = cl->last.i_stream - cl->ref.i_stream;
+  485     *pi_system_duration = cl->last.i_system - cl->ref.i_system;
+  486 
+  487     vlc_mutex_unlock( &cl->lock );
+  488 
+  489     return VLC_SUCCESS;
+  490 }
+	
+		
+	msg_Dbg()
+   69 #define msg_GenericVa(a, b, c, d, e) vlc_vaLog(VLC_OBJECT(a), b, c, d, e)
+   70 
+   71 #define msg_Info( p_this, ... ) \
+   72     vlc_Log( VLC_OBJECT(p_this), VLC_MSG_INFO, MODULE_STRING, __VA_ARGS__ )
+   73 #define msg_Err( p_this, ... ) \
+   74     vlc_Log( VLC_OBJECT(p_this), VLC_MSG_ERR,  MODULE_STRING, __VA_ARGS__ )
+   75 #define msg_Warn( p_this, ... ) \
+   76     vlc_Log( VLC_OBJECT(p_this), VLC_MSG_WARN, MODULE_STRING, __VA_ARGS__ )
+   77 #define msg_Dbg( p_this, ... ) \
+   78     vlc_Log( VLC_OBJECT(p_this), VLC_MSG_DBG,  MODULE_STRING, __VA_ARGS__ )
+
+
+
 
 </pre>
 
@@ -370,9 +464,169 @@ log 一下！
 现在的思路是在认为暂停之后，调用getStats();
 	1986
 
+----------------------
+被分布式的东西打断了节奏。
+
+上面提到的 public native Map<String, Object> getStats();
+
+在JNI/libvlc_jni-track.c中已经实现！这个文件中实现了很多的track！
+jobject Java_org_videolan_libvlc_LibVLC_getStats(JNIEnv *env, jobject thiz)
+{
+    libvlc_media_player_t *mp = getMediaPlayer(env, thiz);
+    if (!mp)
+        return NULL;
+
+    libvlc_media_t *p_mp = libvlc_media_player_get_media(mp);
+    if (!p_mp)
+        return NULL;
+
+    libvlc_media_stats_t p_stats;
+    libvlc_media_get_stats(p_mp, &p_stats);
+
+    jclass mapClass = (*env)->FindClass(env, "java/util/Map");
+    jclass hashMapClass = (*env)->FindClass(env, "java/util/HashMap");
+    jmethodID mapPut = (*env)->GetMethodID(env, mapClass, "put", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+    /* We need a concrete map to start */
+    jmethodID mapInit = (*env)->GetMethodID(env, hashMapClass, "<init>", "()V");
+    jclass integerCls = (*env)->FindClass(env, "java/lang/Integer");
+    jmethodID integerConstructor = (*env)->GetMethodID(env, integerCls, "<init>", "(I)V");
+    jclass floatCls = (*env)->FindClass(env, "java/lang/Float");
+    jmethodID floatConstructor = (*env)->GetMethodID(env, floatCls, "<init>", "(F)V");
+
+    jobject statistics = (*env)->NewObject(env, hashMapClass, mapInit);
+    jobject value = (*env)->NewObject(env, floatCls, floatConstructor, p_stats.f_demux_bitrate);
+    jstring name = (*env)->NewStringUTF(env, "demuxBitrate");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, floatCls, floatConstructor, p_stats.f_input_bitrate);
+    name = (*env)->NewStringUTF(env, "inputBitrate");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, floatCls, floatConstructor, p_stats.f_send_bitrate);
+    name = (*env)->NewStringUTF(env, "sendBitrate");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_decoded_audio);
+    name = (*env)->NewStringUTF(env, "decodedAudio");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_decoded_video);
+    name = (*env)->NewStringUTF(env, "decodedVideo");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_demux_corrupted);
+    name = (*env)->NewStringUTF(env, "demuxCorrupted");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_demux_discontinuity);
+    name = (*env)->NewStringUTF(env, "demuxDiscontinuity");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_demux_read_bytes);
+    name = (*env)->NewStringUTF(env, "demuxReadBytes");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_displayed_pictures);
+    name = (*env)->NewStringUTF(env, "displayedPictures");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_lost_abuffers);
+    name = (*env)->NewStringUTF(env, "lostAbuffers");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_lost_pictures);
+    name = (*env)->NewStringUTF(env, "lostPictures");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_played_abuffers);
+    name = (*env)->NewStringUTF(env, "playedAbuffers");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_read_bytes);
+    name = (*env)->NewStringUTF(env, "readBytes");
+    (*env)->CallObjectMethod(env, statistics, mapPut, value, name);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_sent_bytes);
+    name = (*env)->NewStringUTF(env, "sentBytes");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    value = (*env)->NewObject(env, integerCls, integerConstructor, p_stats.i_sent_packets);
+    name = (*env)->NewStringUTF(env, "sentPackets");
+    (*env)->CallObjectMethod(env, statistics, mapPut, name, value);
+
+    // Clean up local references
+    (*env)->DeleteLocalRef(env, mapClass);
+    (*env)->DeleteLocalRef(env, hashMapClass);
+    (*env)->DeleteLocalRef(env, integerCls);
+    (*env)->DeleteLocalRef(env, floatCls);
+
+    return statistics;
+}
+
+所以我在src/org/videolan/vlc/gui/video/VideoPlayerActivity.java 中 
+    1641:  //添加测量
+        Log.i(MEASURE_TAG, mLibVLC.getStats().toString()
+
 </pre>
 
 
+<h4>关注 clock.c </h4>
+
+<pre>
+继续看源代码，发现了这么一个东西
+
+
+
+</pre>
+
+<h4> 视频流解析</h4>
+
+<pre>
+
+
+从接收到数据流到播放视频的过程分析
+　　 从网络接收到流->对数据流进行视频和音频分离->对视频用解码器解码->显示解码后的视频流
+　　 视频显示部分走势线：分离->解码->新的VOUT缓冲区->VOUT线程
+　　Demux(modules\demux\mpeg\ps.c)->DemuxPs(modules\demux\mpeg\system.c)-> ParsePS->input_SelectES(src\input\input_programs.c)->input_RunDecoder(src\input\input_dec.c)->CreateDecoder->
+　　vout_new_buffer->vout_Request(src\video_output\video_output.c)->vout_Create->RunThread->vout_RenderPicture(src\video_output\vout_pictures.c)->pf_display
+　　注意：p_dec->pf_vout_buffer_new = vout_new_buffer的pf_vout_buffer_new在ffmpeg_NewPictBuf（modules\codec\ffmpeg\video.c）函数中激活
+　　 解码部分走势线：
+　　Demux(modules\demux\mpeg\ps.c)->DemuxPs(modules\demux\mpeg\system.c)-> ParsePS->input_SelectES(src\input\input_programs.c)->input_RunDecoder(src\input\input_dec.c)->CreateDecoder->
+　　DecoderThread
+　　 注意：在解码线程中对数据流（AUDIO 或者VIDEO）进行解码
+　　详细资料 http://developers.videolan.org/vlc/ VLC API documentation 或者VLC developer documentation
+　　 
+　　
+　　Chapter 5. The video output layer 
+　　
+　　Data structures and main loop 
+　　Important data structures are defined in include/video.h and include/video_output.h. The main data structure is picture_t, which describes everything a video decoder thread needs. Please refer to this file for more information. Typically, p_data will be a pointer to YUV planar picture. 
+　　Note also the subpicture_t structure. In fact the VLC SPU decoder only parses the SPU header, and converts the SPU graphical data to an internal format which can be rendered much faster. So a part of the "real" SPU decoder lies in src/video_output/video_spu.c. 
+　　The vout_thread_t structure is much more complex, but you needn't understand everything. Basically the video output thread manages a heap of pictures and subpictures (5 by default). Every picture has a status (displayed, destroyed, empty...) and eventually a presentation time. The main job of the video output is an infinite loop to : [this is subject to change in the near future] 
+　　
+　　Find the next picture to display in the heap. 
+　　Find the current subpicture to display. 
+　　Render the picture (if the video output plug-in doesn't support YUV overlay). Rendering will call an optimized YUV plug-in, which will also do the scaling, add subtitles and an optional picture information field. 
+　　Sleep until the specified date. 
+　　Display the picture (plug-in function). For outputs which display RGB data, it is often accomplished with a buffer switching. p_vout->p_buffer is an array of two buffers where the YUV transform takes place, and p_vout->i_buffer_index indicates the currently displayed buffer. 
+　　Manage events. 
+　　
+　　Methods used by video decoders 
+　　The video output exports a bunch of functions so that decoders can send their decoded data. The most important function is vout_CreatePicture which allocates the picture buffer to the size indicated by the video decoder. It then just needs to feed (void *) p_picture->p_data with the decoded data, and call vout_DisplayPicture and vout_DatePicture upon necessary. 
+　　
+　　picture_t * vout_CreatePicture ( vout_thread_t *p_vout, int i_type, int i_width, int i_height ) : Returns an allocated picture buffer. i_type will be for instance YUV_420_PICTURE, and i_width and i_height are in pixels. 
+　　Warning
+　　If no picture is available in the heap, vout_CreatePicture will return NULL. 
+　　vout_LinkPicture ( vout_thread_t *p_vout, picture_t *p_pic ) : Increases the refcount of the picture, so that it doesn't get accidently freed while the decoder still needs it. For instance, an I or P picture can still be needed after displaying to decode interleaved B pictures. 
+　　vout_UnlinkPicture ( vout_thread_t *p_vout, picture_t *p_pic ) : Decreases the refcount of the picture. An unlink must be done for every link previously made. 
+　　vout_DatePicture ( vout_thread_t *p_vout, picture_t *p_pic ) : Gives the picture a presentation date. You can start working on a picture before knowing precisely at what time it will be displayed. For instance to date an I or P picture, you must wait until you have decoded all previous B pictures (which are indeed placed after - decoding order != presentation order). 
+　　vout_DisplayPicture ( vout_thread_t *p_vout, picture_t *p_pic ) : Tells the video output that a picture has been completely decoded and is ready to be rendered. It can be called before or after vout_DatePicture. 
+　　vout_DestroyPicture ( vout_thread_t *p_vout, picture_t *p_pic ) : Marks the picture as empty (useful in case of a stream parsing error). 
+　　subpicture_t * vout_CreateSubPicture ( vout_thread_t *p_vout, int i_channel, int i_type ) : Returns an allocated subpicture buffer. i_channel is the ID of the subpicture channel, i_type is DVD_SUBPICTURE or TEXT_SUBPICTURE, i_size is the length in bytes of the packet. 
+　　vout_DisplaySubPicture ( vout_thread_t *p_vout, subpicture_t *p_subpic ) : Tells the video output that a subpicture has been completely decoded. It obsoletes the previous subpicture. 
+　　vout_DestroySubPicture ( vout_thread_t *p_vout, subpicture_t *p_subpic ) : Marks the subpicture as empty
+
+</pre>
 
 <h3>方案</h3>
 <pre>
@@ -414,7 +668,11 @@ log 一下！
 
 </pre>
 
+
 <hr />
+
+
+
 
 <p> Welcome to contact <a href="mailto:jangwee1@sina.com.cn">me</a>,the friends who like Machine-Learning and Data-Mining.</p>
 <p> <a href=freedom.png>:)</a></p>
