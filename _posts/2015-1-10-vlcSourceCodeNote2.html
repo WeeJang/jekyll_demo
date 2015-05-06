@@ -1,0 +1,52 @@
+---
+layouts: default
+title: VLCSourceCodeNote2
+---
+
+<h2>{{ page.title }}</h2>
+
+<hr/>
+
+<h3>代码跟踪<h3>
+<pre>
+1 int main(int i_argc,const char *ppsz_argv[])
+{
+	//信号处理
+	signal(SIGPIPE,SIG_IGN);
+	...
+	setenv();
+	...
+	sigaddset();
+	pthread_t self = pthread_self();
+	pthread_sigmask();
+	
+	//
+	const char *argv[i_argc+2];
+	int argc;
+	memcpy(argv+argc,ppsz_argv,i_argc*sizeof(*argv))
+	
+	//初始化 libvlc
+	libvlc_instance_t *vlc = libvlc_new(argc,argv);
+	...
+	//设置退出时回调
+	libvlc_setexit_handler(vlc,vlc_kill,&self)
+	//添加模块
+	libvlc_add_intf();
+	....
+	//
+	libvlc_playlist_play();
+	
+}
+
+2 libvlc_instance_t * libvlc_new( int argc, const char *const *argv )
+{
+	
+}
+
+
+<strong>关于char有一个特殊的语言就是 char* ,在C/C++中有特殊的语义，既不同于signed char*,也不同于unsigned char*,专门用于指’\0'结束的字符串。</strong>
+ 
+</pre>
+
+
+
