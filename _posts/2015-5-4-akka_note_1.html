@@ -1,0 +1,84 @@
+---
+layout: default
+title: Akka_Note_1
+---
+
+<hr>
+
+<h2> Akka_Note_1 </h2>
+
+<p>
+
+1 Ping-Pong Example
+
+
+
+import akka.actor._
+
+
+trait gMessage
+case class startGame() extends gMessage
+case class stopGame() extends gMessage
+case class move() extends gMessage
+
+
+class Ping(pong:ActorRef) extends Actor{
+  
+  var count : Int = _
+  def increate = {
+    count += 1
+    println("move : " + count)
+  }
+  
+  def receive = {
+    case  msg:startGame => {
+      count = 0
+      pong ! new move
+      increate
+    }  
+    case msg:move => {
+      if(count > 100) {
+        sender ! new stopGame
+        context.stop(self)
+      }
+      else {
+        increate
+        sender ! new move
+        
+      } 
+    }
+  } 
+}
+
+class Pong() extends Actor{
+  
+  def receive = {
+    case msg:move => {
+      sender ! new move
+      println("fuck !")
+    }
+    case msg:stopGame => {
+      context.stop(self)
+    }
+  }
+}
+
+
+
+object MMain {
+
+  def main(args: Array[String]) {
+    val system = ActorSystem("pingpong")
+    val pongActor = system.actorOf(Props[Pong],name="pong")
+    val pingActor = system.actorOf(Props(new Ping(pongActor)),name="ping")
+    
+    pingActor ! new startGame
+    
+  }
+}
+
+
+
+
+
+</p>
