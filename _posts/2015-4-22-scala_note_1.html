@@ -19,14 +19,76 @@ title: Scala_Note_1
 　　refer: http://stackoverflow.com/questions/22223304/how-will-xml-modularisation-in-scala-2-11-play-with-xml-literals
 
 7 @符号的作用：
+---1
+//绑定匹配变量
+
+     val list = List(User("jangwee",11),1,User("Liuhuapeng",33),4)
+     val seeList = for{
+       elem @ User(_,_) <- list
+     }yield (elem)
+     
+     println(seeList)    
+
+//output : 
+//    List(User(jangwee,11), User(Liuhuapeng,33))
+
+
+
+
 
 8 sbt 拉取下来的库位置
 　～/.ivy/cache
 9 akka 需要引入　config.jar 
-  com.typesafe.
+com.typesafe.
    refer : http://stackoverflow.com/questions/26052261/bad-symbolic-reference-in-scala-ide-for-eclipse
 
 10　　
+ 过滤数据：
+
+
+    val wordFrequencies = ("hh", 5) :: ("ww", 2) :: ("aa", 7) :: Nil
+
+    //method1,Tuple2
+    def format1(wf: Seq[(String, Int)]): Seq[String] = {
+      wf.filter { x => x._2 > 2 && x._2 < 7 }.map { _._1 }
+    }
+
+    println(format1(wordFrequencies))//List(hh)
+
+    //method2,模式匹配结构
+    def format2(wf: Seq[(String, Int)]): Seq[String] = {
+      wf.filter { case (word, count) => count > 2 && count < 7 }.map { case (word, _) => word }
+    }
+
+    println(format2(wordFrequencies))//List(hh)
+    //method3-1,偏函数
+    //    val pf : PartialFunction[(String,Int),String] = {
+    //      case (word,freq) if freq > 2 && freq < 7 => word
+    //    }
+
+    //method3-2,显式定义偏函数Trait
+    val pf = new PartialFunction[(String, Int), String] {
+      def apply(wordFrequency: (String, Int)): String = {
+        wordFrequency match {
+          case (word, count) if count > 2 && count < 7 => word
+        }
+
+      }
+      def isDefinedAt(wordFrequency: (String, Int)): Boolean = {
+        wordFrequency match {
+          case (word, count) if count > 2 && count < 7 => true
+          case _ => false
+        }
+      }
+    }
+
+    // Compile Okay,RunTime Error
+    //  Exception in thread "main" scala.MatchError: (ww,2) (of class scala.Tuple2)
+    //println(wordFrequencies.map(pf))
+
+    println(wordFrequencies.map(pf.isDefinedAt(_))) //List(true, false, false)
+
+    println(wordFrequencies.collect(pf)) // List(hh)
 
 
 
