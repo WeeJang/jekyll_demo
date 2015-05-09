@@ -128,7 +128,7 @@ val lastNames = List("Jang", "Geng")
     
     println(result) // None
 
-11 异常处理
+12 异常处理
    
 
    //类Java方式的异常处理
@@ -217,6 +217,186 @@ Enter an Int that you'd like to divide by :
 0
 You must've divided by zero or entered something that's not an Int. Try again!
 / by zero
+
+
+----
+
+  def main(args: Array[String]): Unit = {
+    
+   def parseURL(url:String) = Try(new URL(url))//MalformedURLException
+   
+   //val url = parseURL(StdIn.readLine("URL: ")) getOrElse new URL("http://www.baidu.com")
+   
+   val result1 = parseURL("http://www.baidu.com").map{_.getProtocol} //Success(http)
+   result1.map { println _ }
+   
+   val result2 = parseURL("garbage").map{_.getProtocol} //Failure(java.net.MalformedURLException: no protocol: garbage)
+   result2.map { println _ } 
+  }
+
+
+output:
+
+http
+
+
+：result2不执行里面的闭包  
+
+----
+
+
+  def main(args: Array[String]): Unit = {
+
+    def parseURL(url: String) = Try(new URL(url)) //MalformedURLException
+
+    //Method1 -(flatMap with Map)
+    def getURLContent1(url: String):Try[Iterator[String]] = {
+      parseURL(url).flatMap { url => Try(url.openConnection) }
+          .flatMap { conn => Try(conn.getInputStream) }
+          .flatMap { istream => Try(scala.io.Source.fromInputStream(istream))}
+    }.map{_.getLines()}
+   
+    getURLContent1("http://www.baidu.com").map{ x => x.foreach { println _} }
+    
+    //Method2 - for express
+    def getURLContent2(url: String): Try[Iterator[String]] = for{
+      purl <- parseURL(url)
+      conn <- Try(purl.openConnection)
+      inputStream <- Try(conn.getInputStream)
+      source <- Try(scala.io.Source.fromInputStream(inputStream))
+    } yield source.getLines()
+    
+     getURLContent2("http://www.baidu.com").map{ x => x.foreach { println _} }
+  }
+
+
+----
+添加　recover 
+
+    //添加故障回复　recover
+    val content = getURLContent1("garbage") recover {
+      case e: FileNotFoundException => Iterator("Requested page does not exist")
+      case e: MalformedURLException => Iterator("Please make sure to enter a valid URL")
+      case _ => Iterator("An unexpected error has occurred. We are so sorry!")
+    }
+    
+    content.get.foreach { println _ }  
+
+---
+
+13 Either - 无偏的Try
+
+
+      import java.net.URL
+      import scala.io.Source
+      
+      def getContent(url: URL): Either[String,Source] = {
+        if(url.getHost.contains("google"))
+          Left("Requested URL is blocked for the good of the people")
+        else
+          Right(Source.fromURL(url))
+      }
+      
+      //RightProjection 
+      val content : Either[String,Iterator[String]] = getContent(new URL("http://www.baidu.com")).right.map { _.getLines }
+      //Right(non-empty iterator)
+      val morecontent : Either[String,Iterator[String]] = getContent(new URL("http://google.com")).right.map{ _.getLines }
+      //Left(Requested URL is blocked for the good of the people)
+
+      //LeftProjection
+      val content1 : Either[Iterator[String],Source] = getContent(new URL("http://www.baidu.com")).left.map{ Iterator(_) }
+      //Right(non-empty iterator)
+      val morecontent1 : Either[Iterator[String],Source] =getContent(new URL("http://google.com")).left.map{ Iterator(_) }
+      //Left(non-empty iterator)
+      
+      //content.right.map{ iter => iter.foreach { println _ } } 
+      // 网页内容　．．．content-type" content="text/html;charset ...
+      //morecontent.right.map{ iter => iter.foreach { println _ } }
+      //无输出
+      content1.left.map { iter => iter.foreach { println _ } }
+      //无输出
+      morecontent1.left.map { iter => iter.foreach {println _}}
+      //Requested URL is blocked for the good of the people
+
+
+
+
+----
+      val baidu = new URL("http://www.baidu.com")
+      val gufen = new URL("http://www.gfsoso.net")
+
+//    Method 1
+//      val contentSize = getContent(baidu).right.flatMap{
+//        bd => getContent(sina).right.map{
+//          sn => ( bd.getLines().size , sn.getLines().size )
+//        }
+//      }
+
+//    Method 2 For-comprehesion
+  
+      val contentSize = for{
+        bd <- getContent(baidu).right
+        gf <- getContent(gufen).right
+        line1 <- Right(bd.getLines().size).right
+        line2 <- Right(gf.getLines().size).right
+      }yield (line1,line2)
+      
+      println(contentSize) //Right((23,129))
+
+----
+
+      //Fold 函数
+      //如果想变换一个Either(不论它是Left值，还是Right值)，可以使用定义在Either上的fold方法．这个方法接受两个
+      //返回相同类型的变换函数，当这个函数是Left值时，第一个函数被调用，否则，第二个函数会被调用
+      //替换模式匹配
+      
+      val content: Iterator[String] = getContent(new URL("http://www.baidu.com")).fold(Iterator(_), _.getLines())
+
+
+----
+
+         
+    //异常处理
+    import scala.util.control.Exception.catching
+    def handling[Ex <: Throwable, T](exType: Class[Ex])(block: => T): Either[Ex, T] =
+      catching(exType).either(block).asInstanceOf[Either[Ex, T]]
+
+    def parseURL(url: String): Either[MalformedURLException, URL] =
+      handling(classOf[MalformedURLException])(new URL(url))
+
+
+----
+    处理集合
+
+　　　object MMain {
+
+  type Citizen = String
+  case class BlackListResource(url: URL, visitor: Set[Citizen])
+  
+  val blacklist = List(
+    BlackListResource(new URL("https://google.com"),Set("hh")),
+    BlackListResource(new URL("https://sina.com"),Set.empty),
+    BlackListResource(new URL("https://git.com"),Set.empty),
+    BlackListResource(new URL("https://finger.com"),Set("ni","wo"))
+  )
+  
+
+  def main(args: Array[String]): Unit = { 
+    val checkedList : List[Either[URL,Set[Citizen]]] = blacklist.map { bsource =>
+      if(bsource.visitor.isEmpty)  Left(bsource.url)
+      else Right(bsource.visitor)
+    }
+    
+    val suspicisousResources = checkedList.flatMap(_.left.toOption)
+    val problemCitizens = checkedList.flatMap(_.right.toOption)
+    println(problemCitizens.flatten.toSet)
+｝
+
+
+
+
+
+ 
 
 
 
