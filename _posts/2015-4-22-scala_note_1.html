@@ -395,6 +395,74 @@ http
 
 
 
+---------
+
+高阶函数－DRY(Dont Repeat Yourself)
+
+
+ // 命名
+   type EmailFilter = Email => Boolean
+   // 
+   def newEmailsForUser(mails:Seq[Email],filter: EmailFilter) = mails.filter(filter)
+   
+   //EmailFilter工厂函数
+   val sendByOneOf:Set[String] => EmailFilter = 
+     (senders: Set[String] ) =>
+       (email: Email) =>
+         senders.contains(email.sender)
+         
+   val notSendByOneOf:Set[String] => EmailFilter =
+     (senders: Set[String]) =>
+       (email: Email) =>
+         !senders.contains(email.sender)
+         
+         
+   val minumSize : Int => EmailFilter =
+     (n: Int) =>
+       (email: Email) =>
+         email.text.size > n
+   
+   val maxnumSize : Int => EmailFilter =
+     (n: Int) =>
+       (email: Email) =>
+         email.text.size < n
+         
+  def main(args: Array[String]): Unit = { 
+     
+      val emailFilter: EmailFilter = notSendByOneOf(Set("jangwee1@sina.com.cn"))
+      
+      val emails = Email(
+        subject = "hello",
+        text = "hello",
+        sender = "jangwee1@sina.com.cn",
+        recipient = "hh"
+      ) :: Nil
+      
+      val result = newEmailsForUser(emails,emailFilter)
+      println(result.toSeq.toString()) //List()
+    
+  }  
+
+
+improve:
+
+ type sizeCheck = Int => Boolean
+   
+   val sizeConstraint:sizeCheck => EmailFilter =
+     (f: sizeCheck) =>
+       (email: Email) =>
+         f(email.text.size)
+  
+   val mininumSize: Int => EmailFilter =
+     (n: Int) =>
+       sizeConstraint(_ > n)
+       
+   val maxinumSize: Int => EmailFilter =
+     (n: Int) =>
+       sizeConstraint(_ < n)
+       
+
+
 
  
 
